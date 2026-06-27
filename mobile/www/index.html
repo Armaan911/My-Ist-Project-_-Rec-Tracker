@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Podium</title>
+  <style>
+    html,body{height:100%;margin:0;background:#ffffff;color:#17171f;font-family:system-ui,sans-serif}
+    .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+    .logo{width:96px;height:96px;object-fit:contain}
+    .spin{width:34px;height:34px;border:3px solid rgba(6,138,211,.25);border-top-color:#068AD3;border-radius:50%;animation:s 0.8s linear infinite}
+    @keyframes s{to{transform:rotate(360deg)}}
+    .label{color:#6b7280;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/icons/icon-192.png" alt="Podium" />
+    <div class="spin"></div>
+    <div class="label">Loading Podium…</div>
+  </div>
+</body>
+</html>
