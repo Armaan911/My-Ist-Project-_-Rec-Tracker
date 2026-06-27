@@ -79,4 +79,25 @@
   @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   .animate-ticker { animation: ticker 30s linear infinite; }
   .animate-ticker:hover { animation-play-state: paused; }
+
+  /* Podium logo — animated red i-dot: flies in from the globe side and bounces onto the "i". */
+  @keyframes idotDrop {
+    0%   { top: 34%; left: 22%; opacity: 0; transform: translate(-50%,-50%) scale(.4); }
+    18%  { opacity: 1; }
+    55%  { top: 26.8%; left: 66.1%; opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    67%  { top: 8%;   left: 66.1%; transform: translate(-50%,-50%) scale(1); }
+    80%  { top: 26.8%; left: 66.1%; transform: translate(-50%,-50%) scaleX(1.18) scaleY(.82); }
+    90%  { top: 19%;  left: 66.1%; transform: translate(-50%,-50%) scale(1); }
+    100% { top: 26.8%; left: 66.1%; transform: translate(-50%,-50%) scale(1); }
+  }
+  .logo-idot {
+    position: absolute; width: 3.5%; aspect-ratio: 1 / 1; border-radius: 9999px;
+    background: rgb(232,32,24); transform: translate(-50%,-50%);
+    animation: idotDrop 1.9s cubic-bezier(.5,.05,.35,1) both; pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) { .logo-idot { animation: none; top: 26.8%; left: 66.1%; } }
+
+  /* PWA safe areas — keep the sticky nav clear of the status bar / notch in standalone mode. */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 }
