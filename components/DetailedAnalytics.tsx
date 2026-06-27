@@ -1,6 +1,9 @@
 "use client";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui";
+import { CalendarRange } from "lucide-react";
 import PieBreakdown from "@/components/charts/PieBreakdown";
+import { analyticsRange } from "@/app/manager/perf-actions";
 
 type Analytics = {
   stageLabels: string[];
@@ -15,20 +18,51 @@ function Caption({ children }: { children: React.ReactNode }) {
 }
 
 // Plain-language analytics for managers who don't live in spreadsheets.
-export default function DetailedAnalytics({ analytics }: { analytics?: Analytics }) {
-  if (!analytics) return null;
-  const { stageLabels, pivot, teamEffort, reqStatusBreakdown, byClient } = analytics;
+// A single From–To control filters all four sections for the chosen window.
+export default function DetailedAnalytics({ analytics, divisionId = null, today }: { analytics?: Analytics; divisionId?: string | null; today: string }) {
+  const monthStart = today.slice(0, 8) + "01";
+  const [from, setFrom] = useState(monthStart);
+  const [to, setTo] = useState(today);
+  const [data, setData] = useState<Analytics | undefined>(analytics);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!from || !to) return;
+    let alive = true;
+    setBusy(true);
+    analyticsRange(from, to, divisionId).then((res) => {
+      if (!alive) return;
+      if (res.ok) setData(res.data);
+      setBusy(false);
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from, to, divisionId]);
+
+  if (!data) return null;
+  const { stageLabels, pivot, teamEffort, reqStatusBreakdown, byClient } = data;
 
   const effortSteps = teamEffort;
   const maxEffort = Math.max(1, ...effortSteps.map((s) => s.value));
-
   const colMax = stageLabels.map((_, c) => Math.max(1, ...pivot.map((r) => r.cells[c] ?? 0)));
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-muted">
+          <CalendarRange size={16} className="text-brand-700" /> Detailed analytics
+          {busy && <span className="text-xs font-normal">· loading…</span>}
+        </h2>
+        <span className="flex items-center gap-1.5">
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" title="From" />
+          <span className="text-xs text-muted">to</span>
+          <input type="date" value={to} min={from || undefined} max={today} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" title="To" />
+        </span>
+      </div>
+
       {/* Team daily-effort funnel */}
       <Card>
-        <h2 className="text-lg font-semibold">Team effort this month — from first contact to interview</h2>
+        <h2 className="text-lg font-semibold">Team effort — from first contact to interview</h2>
         <Caption>This is the legwork your team logged in their daily updates. Each bar is the team total for that step. Big drops between two steps show where candidates fall out of the process.</Caption>
         <div className="space-y-2">
           {effortSteps.map((s) => (
@@ -41,7 +75,7 @@ export default function DetailedAnalytics({ analytics }: { analytics?: Analytics
               </div>
             </div>
           ))}
-          {effortSteps.every((s) => s.value === 0) && <p className="py-2 text-sm text-muted">No daily activity logged yet this month.</p>}
+          {effortSteps.every((s) => s.value === 0) && <p className="py-2 text-sm text-muted">No daily activity logged in this range.</p>}
         </div>
       </Card>
 

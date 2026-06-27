@@ -118,7 +118,7 @@ export default function ManagerDashboard({ data, verified, today }: { data: any;
             <h2 className="mb-3 text-lg font-semibold">Submissions vs closures — last 8 weeks</h2>
             <TrendChart data={view.trend} />
           </Card>
-          <DetailedAnalytics analytics={view.analytics} />
+          <DetailedAnalytics analytics={view.analytics} divisionId={tab === "all" ? null : tab} today={today} />
           {active.performance && <PerformanceTracking perf={active.performance} />}
           <Leaderboard periods={view.leaderboards} />
         </>

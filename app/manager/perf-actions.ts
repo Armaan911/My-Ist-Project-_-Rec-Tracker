@@ -144,3 +144,71 @@ export async function rangeReport(fromDate: string, toDate: string, divisionId?:
     closures,
   };
 }
+
+// Detailed analytics for an arbitrary [from,to] window (manager/admin), optionally one
+// division. Powers the date filter on the Detailed view's four sections:
+//   - teamEffort: daily-update activity logged in the range
+//   - pivot: candidates submitted in the range, by recruiter x current stage
+//   - reqStatusBreakdown / byClient: requirements received in the range
+export async function analyticsRange(fromDate: string, toDate: string, divisionId?: string | null) {
+  const me = await getProfile();
+  if (me?.role !== "manager" && me?.role !== "admin") return { ok: false as const, error: "Not authorized" };
+  if (!fromDate || !toDate) return { ok: false as const, error: "Pick a from and to date" };
+  const lo = fromDate <= toDate ? fromDate : toDate;
+  const hi = fromDate <= toDate ? toDate : fromDate;
+  const admin = createAdminClient();
+
+  const [{ data: statuses }, { data: recruiters }, { data: subs }, { data: requirements }, { data: metricDefs }, { data: effort }] =
+    await Promise.all([
+      admin.from("submission_statuses").select("id, label, sort_order, is_active").eq("is_active", true).order("sort_order"),
+      admin.from("profiles").select("id, full_name").eq("role", "recruiter"),
+      admin.from("submissions").select("recruiter_id, division_id, current_status_id, submitted_date"),
+      admin.from("requirements").select("division_id, status, date_received, clients(name)"),
+      admin.from("daily_metrics").select("id, label, color, sort_order").eq("is_active", true).order("sort_order"),
+      admin.from("daily_activity_values").select("division_id, metric_id, value, activity_date"),
+    ]);
+
+  const labelOf = new Map(((statuses ?? []) as any[]).map((s) => [s.id, s.label]));
+  const stageLabels = ((statuses ?? []) as any[]).map((s) => s.label);
+  const nameOf = new Map(((recruiters ?? []) as any[]).map((r) => [r.id, r.full_name]));
+
+  // who-at-stage pivot: candidates submitted in range, by recruiter x current stage
+  const byRec = new Map<string, { name: string; counts: Record<string, number>; total: number }>();
+  for (const s of (subs ?? []) as any[]) {
+    if (divisionId && s.division_id !== divisionId) continue;
+    if (!inRange(s.submitted_date, lo, hi)) continue;
+    const name = nameOf.get(s.recruiter_id);
+    if (!name) continue;
+    const o = byRec.get(s.recruiter_id) ?? { name, counts: {} as Record<string, number>, total: 0 };
+    const lbl = labelOf.get(s.current_status_id) ?? "Other";
+    o.counts[lbl] = (o.counts[lbl] ?? 0) + 1;
+    o.total++;
+    byRec.set(s.recruiter_id, o);
+  }
+  const pivot = [...byRec.values()]
+    .sort((a, b) => b.total - a.total)
+    .map((r) => ({ name: r.name, cells: stageLabels.map((l) => r.counts[l] ?? 0), total: r.total }));
+
+  // requirements received in range -> by status and by client
+  const divReqs = (requirements ?? []).filter((r: any) => (divisionId ? r.division_id === divisionId : true) && inRange(r.date_received, lo, hi));
+  const reqStatusCounts: Record<string, number> = {};
+  const clientCounts = new Map<string, number>();
+  for (const r of divReqs as any[]) {
+    reqStatusCounts[r.status] = (reqStatusCounts[r.status] ?? 0) + 1;
+    const cn = (r.clients as any)?.name ?? "No client";
+    clientCounts.set(cn, (clientCounts.get(cn) ?? 0) + 1);
+  }
+  const reqStatusBreakdown = Object.entries(reqStatusCounts).map(([name, value]) => ({ name, value: value as number }));
+  const byClient = [...clientCounts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+  // team daily-effort in range, per configured metric
+  const sumByMetric = new Map<string, number>();
+  for (const e of (effort ?? []) as any[]) {
+    if (divisionId && e.division_id !== divisionId) continue;
+    if (!inRange(e.activity_date, lo, hi)) continue;
+    sumByMetric.set(e.metric_id, (sumByMetric.get(e.metric_id) ?? 0) + (e.value ?? 0));
+  }
+  const teamEffort = ((metricDefs ?? []) as any[]).map((m) => ({ label: m.label, color: m.color, value: sumByMetric.get(m.id) ?? 0 }));
+
+  return { ok: true as const, data: { stageLabels, pivot, teamEffort, reqStatusBreakdown, byClient } };
+}
