@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Spinner } from "@/components/ui";
-
-// Hosted Podium logo first, committed local gif as fallback, then text mark.
-const LOGO_SRCS = ["https://i.ibb.co/TjgLdLf/117092.gif", "/117092.gif"];
+import AnimatedLogo from "@/components/AnimatedLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +16,6 @@ export default function LoginPage() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [logoStage, setLogoStage] = useState(0);
 
   async function handlePassword() {
     setLoading(true); setError(null);
@@ -53,18 +50,11 @@ export default function LoginPage() {
       <div className="relative grid w-full max-w-5xl items-center gap-12 animate-fade-up md:grid-cols-2 lg:gap-24">
         {/* Left — large static logo, "taped" onto the page */}
         <div className="flex flex-col items-center text-center md:items-start md:text-left">
-          <div className="relative inline-block -rotate-1 rounded-2xl bg-surface/70 p-6 shadow-md ring-1 ring-line/60 backdrop-blur-sm">
-            {/* cello-tape strips holding the logo in place */}
-            <span className="pointer-events-none absolute -left-5 -top-3 h-7 w-24 -rotate-12 rounded-[3px] bg-gradient-to-br from-white/75 to-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.12)] ring-1 ring-white/50" />
-            <span className="pointer-events-none absolute -right-5 -top-3 h-7 w-24 rotate-12 rounded-[3px] bg-gradient-to-bl from-white/75 to-white/20 shadow-[0_1px_3px_rgba(0,0,0,0.12)] ring-1 ring-white/50" />
-            {logoStage < LOGO_SRCS.length ? (
-              <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-40 w-auto max-w-[440px] object-contain sm:h-52 md:h-60" />
-            ) : (
-              <div className="flex flex-col items-center">
-                <span className="grid h-20 w-20 place-items-center rounded-2xl brand-mark text-3xl font-bold text-white">P</span>
-                <h1 className="mt-3 font-display text-4xl font-bold">Podium</h1>
-              </div>
-            )}
+          <div className="relative inline-block max-w-full -rotate-1 rounded-2xl bg-surface/70 p-4 shadow-md ring-1 ring-line/60 backdrop-blur-sm sm:p-6">
+            {/* brown cello-tape strips holding the logo in place */}
+            <span className="pointer-events-none absolute -left-4 -top-3 h-7 w-20 -rotate-12 rounded-[3px] bg-gradient-to-br from-[#b5824e]/90 to-[#7a512c]/70 shadow-[0_1px_3px_rgba(0,0,0,0.2)] ring-1 ring-[#5e3d22]/30 sm:-left-5 sm:w-24" />
+            <span className="pointer-events-none absolute -right-4 -top-3 h-7 w-20 rotate-12 rounded-[3px] bg-gradient-to-bl from-[#b5824e]/90 to-[#7a512c]/70 shadow-[0_1px_3px_rgba(0,0,0,0.2)] ring-1 ring-[#5e3d22]/30 sm:-right-5 sm:w-24" />
+            <AnimatedLogo size={38} />
           </div>
           <p className="mt-6 max-w-xs text-sm text-muted">Track your desk, your team and every closure — all in one place.</p>
         </div>

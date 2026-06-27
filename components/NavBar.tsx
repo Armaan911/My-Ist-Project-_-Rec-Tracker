@@ -7,15 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import NavUserMenu from "@/components/NavUserMenu";
-
-// Transparent PNG (white pill + border removed) first, original gif as fallback, then text mark.
-const LOGO_SRCS = ["/logo.png", "/117092.gif"];
+import AnimatedLogo from "@/components/AnimatedLogo";
 
 export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }: { name: string; role: string; userId?: string; avatarUrl?: string | null; isCoordinator?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
-  const [logoStage, setLogoStage] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const isAdmin = role === "admin";
   const isMgr = role === "admin" || role === "manager";
@@ -53,19 +50,8 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
             className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line text-ink hover:bg-canvas sm:hidden">
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
-          <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5">
-            {logoStage < LOGO_SRCS.length ? (
-              <span className="relative inline-flex">
-                <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-16 w-auto max-w-[270px] object-contain" />
-                {/* Only over the transparent PNG (which is dotless); the gif fallback already animates. */}
-                {logoStage === 0 && <span aria-hidden className="logo-idot" />}
-              </span>
-            ) : (
-              <>
-                <span className="grid h-9 w-9 place-items-center rounded-xl brand-mark text-[15px] font-bold text-white shadow-[0_2px_8px_rgba(6,138,211,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]">P</span>
-                <span className="font-display text-[15px] font-bold tracking-tight leading-none">Podium</span>
-              </>
-            )}
+          <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center">
+            <AnimatedLogo size={30} slogan={false} />
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
             {links.map(({ href, label, icon: Icon }) => {

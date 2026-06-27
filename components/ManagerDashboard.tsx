@@ -39,7 +39,7 @@ export default function ManagerDashboard({ data, verified, today }: { data: any;
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Team dashboard</h1>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg border border-line p-0.5">

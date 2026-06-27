@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="h-[3px] w-full brand-mark opacity-80" />
       <div className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 pt-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <img src="/logo.png" alt="Podium" className="h-10 w-auto object-contain" />
+          <img src="/logo-static.png" alt="Podium" className="h-10 w-auto object-contain" />
           <span className="hidden h-9 w-px bg-line sm:block" />
           <p className="max-w-sm text-center text-sm text-muted sm:text-left">
             Daily allocation, pipeline &amp; performance — built for Conglomerate Corporates.
