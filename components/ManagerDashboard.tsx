@@ -119,7 +119,7 @@ export default function ManagerDashboard({ data, verified, today }: { data: any;
             <TrendChart data={view.trend} />
           </Card>
           <DetailedAnalytics analytics={view.analytics} divisionId={tab === "all" ? null : tab} today={today} />
-          {active.performance && <PerformanceTracking perf={active.performance} />}
+          {active.performance && <PerformanceTracking perf={active.performance} today={today} />}
           <Leaderboard periods={view.leaderboards} />
         </>
       )}
