@@ -8,8 +8,8 @@ import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, Badge
 import NotificationBell from "@/components/NotificationBell";
 import NavUserMenu from "@/components/NavUserMenu";
 
-// Hosted Podium logo first, committed local gif as fallback, then text mark.
-const LOGO_SRCS = ["https://i.ibb.co/TjgLdLf/117092.gif", "/117092.gif"];
+// Transparent PNG (white pill + border removed) first, original gif as fallback, then text mark.
+const LOGO_SRCS = ["/logo.png", "/117092.gif"];
 
 export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }: { name: string; role: string; userId?: string; avatarUrl?: string | null; isCoordinator?: boolean }) {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
           </button>
           <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5">
             {logoStage < LOGO_SRCS.length ? (
-              <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-14 w-auto max-w-[240px] object-contain mix-blend-multiply" />
+              <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-16 w-auto max-w-[270px] object-contain" />
             ) : (
               <>
                 <span className="grid h-9 w-9 place-items-center rounded-xl brand-mark text-[15px] font-bold text-white shadow-[0_2px_8px_rgba(6,138,211,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]">P</span>
