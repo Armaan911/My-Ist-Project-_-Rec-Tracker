@@ -7,3 +7,6 @@ node_modules
 next-env.d.ts
 dev-server.log
 _tmp_*.cjs
+
+.vercel
+.env*
