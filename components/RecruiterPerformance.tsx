@@ -41,6 +41,13 @@ export default function RecruiterPerformance({ recruiterStats, divisionId = null
   }, [preset, from, to, today]);
   const periodLabel = PRESETS.find((p) => p.value === preset)?.label.toLowerCase() ?? "this month";
 
+  // The From–To inputs are always visible: for a preset they show its computed
+  // window, and editing either one switches the selection to a custom range.
+  const effFrom = preset === "custom" ? from : range?.[0] ?? "";
+  const effTo = preset === "custom" ? to : range?.[1] ?? "";
+  const editFrom = (v: string) => { if (preset !== "custom") { setFrom(v); setTo(effTo); setPreset("custom"); } else setFrom(v); };
+  const editTo = (v: string) => { if (preset !== "custom") { setTo(v); setFrom(effFrom); setPreset("custom"); } else setTo(v); };
+
   useEffect(() => {
     if (!range) return;
     let alive = true; setBusy(true);
@@ -87,13 +94,11 @@ export default function RecruiterPerformance({ recruiterStats, divisionId = null
           <select className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" value={preset} onChange={(e) => setPreset(e.target.value)}>
             {PRESETS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
-          {preset === "custom" && (
-            <span className="flex items-center gap-1.5">
-              <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" />
-              <span className="text-xs text-muted">to</span>
-              <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" />
-            </span>
-          )}
+          <span className="flex items-center gap-1.5">
+            <input type="date" value={effFrom} max={effTo || undefined} onChange={(e) => editFrom(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" title="From" />
+            <span className="text-xs text-muted">to</span>
+            <input type="date" value={effTo} min={effFrom || undefined} max={today} onChange={(e) => editTo(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" title="To" />
+          </span>
           <select className="h-9 rounded-lg border border-line bg-surface px-2 text-sm" value={sel} onChange={(e) => { setSel(e.target.value); setInsight(null); }}>
             <option value="all">Overall (all recruiters)</option>
             {recruiterStats.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}

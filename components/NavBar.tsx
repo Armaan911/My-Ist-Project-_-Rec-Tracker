@@ -55,7 +55,7 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
           </button>
           <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5">
             {logoStage < LOGO_SRCS.length ? (
-              <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-12 w-auto max-w-[210px] object-contain" />
+              <img src={LOGO_SRCS[logoStage]} alt="Podium" onError={() => setLogoStage((s) => s + 1)} className="h-14 w-auto max-w-[240px] object-contain mix-blend-multiply" />
             ) : (
               <>
                 <span className="grid h-9 w-9 place-items-center rounded-xl brand-mark text-[15px] font-bold text-white shadow-[0_2px_8px_rgba(6,138,211,0.35),inset_0_1px_0_rgba(255,255,255,0.25)]">P</span>

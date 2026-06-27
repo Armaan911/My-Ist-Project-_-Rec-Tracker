@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Badge, Card, Modal, PriorityBadge } from "@/components/ui";
 import FunnelByStage from "@/components/charts/FunnelByStage";
-import ClosuresByRecruiter from "@/components/charts/ClosuresByRecruiter";
+import ClosuresByRecruiterCard from "@/components/ClosuresByRecruiterCard";
 import TrendChart from "@/components/charts/TrendChart";
 import Leaderboard from "@/components/Leaderboard";
 import AlertsFeed from "@/components/AlertsFeed";
@@ -101,10 +101,7 @@ export default function ManagerDashboard({ data, verified, today }: { data: any;
 
       {!detailed ? (
         <>
-          <Card>
-            <h2 className="mb-3 text-lg font-semibold">Closures by recruiter — this month</h2>
-            <ClosuresByRecruiter data={view.byRecruiter} />
-          </Card>
+          <ClosuresByRecruiterCard recruiters={(view.recruiterStats ?? []).map((r: any) => ({ id: r.id, name: r.name }))} initial={view.byRecruiter} divisionId={tab === "all" ? null : tab} today={today} />
           <Leaderboard periods={view.leaderboards} />
         </>
       ) : (
@@ -115,10 +112,7 @@ export default function ManagerDashboard({ data, verified, today }: { data: any;
               <h2 className="mb-3 text-lg font-semibold">Pipeline — current funnel</h2>
               <FunnelByStage data={view.funnel} />
             </Card>
-            <Card>
-              <h2 className="mb-3 text-lg font-semibold">Closures by recruiter — this month</h2>
-              <ClosuresByRecruiter data={view.byRecruiter} />
-            </Card>
+            <ClosuresByRecruiterCard recruiters={(view.recruiterStats ?? []).map((r: any) => ({ id: r.id, name: r.name }))} initial={view.byRecruiter} divisionId={tab === "all" ? null : tab} today={today} />
           </div>
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Submissions vs closures — last 8 weeks</h2>
