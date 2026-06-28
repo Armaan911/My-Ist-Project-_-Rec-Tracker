@@ -186,6 +186,18 @@ export default async function ManagerPage() {
       const w = (snaps ?? []).find((x: any) => x.period_type === type && (divId ? x.division_id === divId : true));
       return w ? { period_type: type, name: (w.profiles as any)?.full_name ?? "—", closures: w.closures, period_end: w.period_end } : null;
     };
+    // When no period has been finalized yet (no snapshot winner), fall back to the CURRENT
+    // leader (most closures in that period) so the cards show who's leading, not "nothing".
+    const topByClosures = (key: string) => {
+      const top = [...rows].filter((r: any) => (r[key] ?? 0) > 0).sort((a: any, b: any) => b[key] - a[key])[0];
+      return top ? { name: top.name as string, closures: top[key] as number } : null;
+    };
+    const performerFor = (type: string, key: string) => {
+      const finalized = pick(type);
+      if (finalized) return finalized;
+      const live = topByClosures(key);
+      return live ? { period_type: type, name: live.name, closures: live.closures, period_end: "", live: true } : null;
+    };
     const divAlerts = (alerts ?? []).filter((a: any) => (divId ? a.division_id === divId : true));
 
     // ---- #2 drill-down detail lists (records behind each stat card) ----
@@ -247,7 +259,7 @@ export default async function ManagerPage() {
       funnel, byRecruiter, trend, leaderboards,
       recruiterStats, overallPie,
       alerts: divAlerts,
-      performers: { week: pick("weekly"), month: pick("monthly"), year: pick("yearly") },
+      performers: { week: performerFor("weekly", "closWeek"), month: performerFor("monthly", "closuresMonth"), year: performerFor("yearly", "closuresYear") },
       details: { openRequirements, submissions: submissionsList, closures: closuresList, recruiters: recruitersList },
       analytics: { stageLabels, pivot, teamEffort, reqStatusBreakdown, byClient },
     };

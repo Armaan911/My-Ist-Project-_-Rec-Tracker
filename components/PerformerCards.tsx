@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui";
 
-type Winner = { period_type: string; name: string; closures: number; period_end: string } | null;
+type Winner = { period_type: string; name: string; closures: number; period_end: string; live?: boolean } | null;
 
 export default function PerformerCards({ week, month, year }: { week: Winner; month: Winner; year: Winner }) {
   const Item = ({ label, w }: { label: string; w: Winner }) => (
@@ -9,10 +9,12 @@ export default function PerformerCards({ week, month, year }: { week: Winner; mo
       {w ? (
         <>
           <div className="mt-1 text-lg font-bold">{w.name}</div>
-          <div className="text-xs text-slate-500">{w.closures} closures · ended {w.period_end}</div>
+          <div className="text-xs text-slate-500">
+            {w.closures} closure{w.closures === 1 ? "" : "s"} · {w.live ? `leading the ${label}` : `ended ${w.period_end}`}
+          </div>
         </>
       ) : (
-        <div className="mt-1 text-sm text-slate-400">No finalized {label} yet</div>
+        <div className="mt-1 text-sm text-slate-400">No closures this {label} yet</div>
       )}
     </Card>
   );
