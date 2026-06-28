@@ -17,8 +17,8 @@ const TABS: [string, string, any][] = [
 
 export default function ManagerTabs({ basePath = "/manager" }: { basePath?: string }) {
   const path = usePathname();
-  // Revenue is managers-only and lives under /manager (hidden from the admin team view).
-  const tabs: [string, string, any][] = basePath === "/manager" ? [...TABS, ["/revenue", "Revenue", Wallet]] : TABS;
+  // Revenue (profit) is for managers + admins; it lives under each role's team base.
+  const tabs: [string, string, any][] = [...TABS, ["/revenue", "Revenue", Wallet]];
   return (
     <div className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
       {tabs.map(([suffix, label, Icon]) => {

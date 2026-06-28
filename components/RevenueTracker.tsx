@@ -68,7 +68,7 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Revenue tracker</h1>
-          <p className="text-sm text-muted">Revenue is the profit you record per closure. Recruiters enter the closed rate; you set the profit. Visible to managers only.</p>
+          <p className="text-sm text-muted">Revenue is the profit you record per closure. Recruiters enter the closed rate; you set the profit. Visible to managers and admins only.</p>
         </div>
         <div className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${left <= 20 ? "border-danger-600/40 bg-danger-50 text-danger-600" : "border-line text-muted"}`}>
           Auto-locks in {mm}:{ss}

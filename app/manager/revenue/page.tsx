@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export default async function RevenuePage() {
   const me = await getProfile();
   if (!me) redirect("/login");
-  // Revenue is managers-only (admins use the team dashboard).
-  if (me.role !== "manager") redirect("/manager");
+  // Revenue (profit) is visible to managers and admins only.
+  if (me.role !== "manager" && me.role !== "admin") redirect("/manager");
 
   const admin = createAdminClient();
   const { data: rows } = await admin.from("reward_requests")
