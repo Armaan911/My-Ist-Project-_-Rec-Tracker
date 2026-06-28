@@ -58,15 +58,27 @@ export function parseBool(raw: string | undefined): boolean | null {
   return ["yes", "y", "true", "1", "open", "open2work", "opentowork", "available"].includes(t);
 }
 
-// Turn a Google Sheets share URL into its CSV-export URL; pass through anything else.
+// Turn a share URL into a directly-fetchable URL:
+//  • Google Sheets  → CSV-export URL
+//  • SharePoint / OneDrive → direct download (works for "anyone with the link" shares;
+//    the downloaded .xlsx/.csv is parsed server-side)
+//  • anything else  → passed through (e.g. a direct CSV link)
 export function toCsvUrl(link: string): string {
   const l = link.trim();
-  const m = l.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if (m) {
+  const g = l.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (g) {
     const gid = (l.match(/[#&?]gid=(\d+)/) || [])[1] ?? "0";
-    return `https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gid}`;
+    return `https://docs.google.com/spreadsheets/d/${g[1]}/export?format=csv&gid=${gid}`;
+  }
+  if (/sharepoint\.com|onedrive\.live\.com|1drv\.ms/i.test(l) && !/[?&]download=1(?:&|$)/.test(l)) {
+    return l + (l.includes("?") ? "&" : "?") + "download=1";
   }
   return l;
+}
+
+// True for hosts that serve Excel workbooks (so we parse .xlsx rather than CSV text).
+export function isSharePointLink(link: string): boolean {
+  return /sharepoint\.com|onedrive\.live\.com|1drv\.ms/i.test(link);
 }
 
 // Minimal RFC-4180-ish CSV parser (handles quoted fields, embedded commas/newlines).

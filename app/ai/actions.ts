@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
 import { notify } from "@/lib/notify";
 import { parseCsv, rowToFetched, toCsvUrl, isValidStatus } from "@/lib/fetchedProfiles";
+import ExcelJS from "exceljs";
 
 const AI_EDITABLE = ["candidate_name", "linkedin_url", "location", "email", "phone", "open_to_work", "ownership", "status"];
 
@@ -36,30 +37,77 @@ export async function aiSetResume(id: string, url: string | null) {
   return { ok: true as const };
 }
 
-// Resolve raw CSV text from either an uploaded file's text or a sheet/CSV link.
-async function resolveText(input: { csvText?: string; link?: string }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
-  let text = (input.csvText ?? "").trim();
-  if (!text && input.link) {
-    try {
-      const res = await fetch(toCsvUrl(input.link), { redirect: "follow" });
-      if (!res.ok) return { ok: false, error: `Couldn't read the sheet (HTTP ${res.status}). Share it as “anyone with the link”.` };
-      text = await res.text();
-      if (text.trim().startsWith("<")) return { ok: false, error: "That link returned a web page, not CSV. Share the sheet (anyone with the link) or use a CSV export link." };
-    } catch (e: any) {
-      return { ok: false, error: "Couldn't fetch the link: " + (e?.message ?? "unknown error") };
-    }
+// exceljs cell values can be plain scalars or objects (hyperlinks, rich text, formulas).
+function cellText(v: any): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "object") {
+    if (typeof v.text === "string") return v.text;                                  // hyperlink cell
+    if (Array.isArray(v.richText)) return v.richText.map((t: any) => t?.text ?? "").join("");
+    if ("result" in v) return cellText(v.result);                                   // formula → result
+    if (typeof v.hyperlink === "string") return v.hyperlink;
   }
-  if (!text) return { ok: false, error: "Provide a sheet/CSV link or upload a CSV file." };
-  return { ok: true, text };
+  return String(v);
+}
+
+// Read the first worksheet of an .xlsx workbook into the same shape parseCsv produces
+// (header row → lowercased keys), so the rest of the pipeline is unchanged.
+async function xlsxToRows(buf: ArrayBuffer): Promise<Record<string, string>[]> {
+  const wb = new ExcelJS.Workbook();
+  // Buffer.from(ArrayBuffer) is correct at runtime; the cast sidesteps a @types/node
+  // Buffer-generics mismatch with exceljs's load() signature.
+  await wb.xlsx.load(Buffer.from(buf) as any);
+  const ws = wb.worksheets[0];
+  if (!ws) return [];
+  const matrix: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    const vals = row.values as any[]; // 1-indexed: [empty, col1, col2, …]
+    const cells: string[] = [];
+    for (let c = 1; c < vals.length; c++) cells.push(cellText(vals[c]).trim());
+    matrix.push(cells);
+  });
+  if (matrix.length === 0) return [];
+  const headers = matrix[0].map((h) => h.trim().toLowerCase());
+  return matrix.slice(1)
+    .filter((r) => r.some((c) => c !== ""))
+    .map((r) => { const o: Record<string, string> = {}; headers.forEach((h, i) => (o[h] = r[i] ?? "")); return o; });
+}
+
+// Resolve tabular rows from an uploaded CSV's text, or a sheet/CSV/Excel link
+// (Google Sheets, SharePoint/OneDrive Excel, or a direct CSV).
+async function resolveRows(input: { csvText?: string; link?: string }): Promise<{ ok: true; rows: Record<string, string>[] } | { ok: false; error: string }> {
+  const csvText = (input.csvText ?? "").trim();
+  if (csvText) return { ok: true, rows: parseCsv(csvText) };
+  if (!input.link) return { ok: false, error: "Provide a sheet/CSV link or upload a CSV file." };
+  try {
+    const res = await fetch(toCsvUrl(input.link), { redirect: "follow" });
+    if (!res.ok) return { ok: false, error: `Couldn't read the file (HTTP ${res.status}). Share it as “anyone with the link”.` };
+    const ct = (res.headers.get("content-type") ?? "").toLowerCase();
+    const buf = await res.arrayBuffer();
+    const b = new Uint8Array(buf);
+    const isZip = b.length > 3 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04; // "PK\x03\x04" → xlsx
+    if (isZip || ct.includes("spreadsheetml") || ct.includes("officedocument") || ct.includes("application/vnd.ms-excel")) {
+      const rows = await xlsxToRows(buf);
+      if (rows.length === 0) return { ok: false, error: "That workbook had no readable rows — check the first sheet’s headers." };
+      return { ok: true, rows };
+    }
+    const text = new TextDecoder("utf-8").decode(b);
+    if (text.trim().startsWith("<")) return { ok: false, error: "That link returned a web page, not a sheet. Share it as “anyone with the link” (Google Sheet, SharePoint/OneDrive, or a CSV export link)." };
+    return { ok: true, rows: parseCsv(text) };
+  } catch (e: any) {
+    return { ok: false, error: "Couldn't fetch the link: " + (e?.message ?? "unknown error") };
+  }
 }
 
 // Parse a sheet/CSV (no DB write) so the AI team can review the tabulated rows before importing.
 export async function previewFetched(input: { csvText?: string; link?: string }) {
   const me = await getProfile();
   if (!me || (me.role !== "ai_team" && me.role !== "admin")) return { ok: false as const, error: "Not authorized" };
-  const t = await resolveText(input);
+  const t = await resolveRows(input);
   if (!t.ok) return { ok: false as const, error: t.error };
-  const rows = parseCsv(t.text).map(rowToFetched).filter((r) => r.candidate_name || r.email || r.linkedin_url);
+  const rows = t.rows.map(rowToFetched).filter((r) => r.candidate_name || r.email || r.linkedin_url);
   if (rows.length === 0) return { ok: false as const, error: "No candidate rows found — check the column headers." };
   return { ok: true as const, rows };
 }
@@ -72,9 +120,9 @@ export async function importFetchedProfiles(input: { csvText?: string; link?: st
   const pocIds = Array.from(new Set((input.pocIds ?? []).filter(Boolean)));
   if (pocIds.length === 0) return { ok: false as const, error: "Pick at least one POC recruiter." };
 
-  const t = await resolveText(input);
+  const t = await resolveRows(input);
   if (!t.ok) return { ok: false as const, error: t.error };
-  const rows = parseCsv(t.text).map(rowToFetched).filter((r) => r.candidate_name || r.email || r.linkedin_url);
+  const rows = t.rows.map(rowToFetched).filter((r) => r.candidate_name || r.email || r.linkedin_url);
   if (rows.length === 0) return { ok: false as const, error: "No candidate rows found — check the column headers." };
 
   const admin = createAdminClient();

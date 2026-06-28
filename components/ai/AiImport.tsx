@@ -77,9 +77,9 @@ export default function AiImport({ requirements, recruiters }: { requirements: R
           </div>
           {mode === "link" ? (
             <div>
-              <Label>Google Sheet or CSV link</Label>
-              <Input value={link} onChange={(e) => { setLink(e.target.value); setPreview(null); }} placeholder="https://docs.google.com/spreadsheets/…" />
-              <p className="mt-1 text-xs text-muted">Share the sheet as “anyone with the link” so it can be read.</p>
+              <Label>Google Sheet, SharePoint or CSV link</Label>
+              <Input value={link} onChange={(e) => { setLink(e.target.value); setPreview(null); }} placeholder="Google Sheets, SharePoint/OneDrive, or CSV URL…" />
+              <p className="mt-1 text-xs text-muted">Paste a Google Sheet, a SharePoint/OneDrive Excel file, or a CSV link — shared as “anyone with the link” so the team can work off the same file.</p>
             </div>
           ) : (
             <div>
