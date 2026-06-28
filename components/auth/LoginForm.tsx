@@ -51,9 +51,9 @@ export default function LoginPage() {
         {/* Left — large static logo, "taped" onto the page */}
         <div className="flex flex-col items-center text-center md:items-start md:text-left">
           <div className="relative inline-block max-w-full -rotate-1 rounded-2xl bg-surface/70 p-4 shadow-md ring-1 ring-line/60 backdrop-blur-sm sm:p-6">
-            {/* brown cello-tape strips holding the logo in place */}
-            <span className="pointer-events-none absolute -left-4 -top-3 h-7 w-20 -rotate-12 rounded-[3px] bg-gradient-to-br from-[#b5824e]/90 to-[#7a512c]/70 shadow-[0_1px_3px_rgba(0,0,0,0.2)] ring-1 ring-[#5e3d22]/30 sm:-left-5 sm:w-24" />
-            <span className="pointer-events-none absolute -right-4 -top-3 h-7 w-20 rotate-12 rounded-[3px] bg-gradient-to-bl from-[#b5824e]/90 to-[#7a512c]/70 shadow-[0_1px_3px_rgba(0,0,0,0.2)] ring-1 ring-[#5e3d22]/30 sm:-right-5 sm:w-24" />
+            {/* curled red & blue cello-tape strips holding the logo in place */}
+            <span className="tape tape-red pointer-events-none absolute -left-5 -top-3.5 -rotate-12" />
+            <span className="tape tape-blue pointer-events-none absolute -right-5 -top-3.5 rotate-12" />
             <AnimatedLogo size={38} />
           </div>
           <p className="mt-6 max-w-xs text-sm text-muted">Track your desk, your team and every closure — all in one place.</p>
