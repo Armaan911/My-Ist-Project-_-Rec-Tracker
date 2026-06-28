@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import NavBar from "@/components/NavBar";
 import BadgesPanel from "@/components/BadgesPanel";
+import ClosedRateEditor from "@/components/ClosedRateEditor";
 import { Card } from "@/components/ui";
 import { istDateStr, prettyDate } from "@/lib/dates";
 import { computeRecruiterMetrics, badgeProgress, type Badge } from "@/lib/badges";
@@ -34,7 +35,7 @@ export default async function RewardsPage() {
   const admin = createAdminClient();
   const [{ data: requests }, metrics, { data: allBadges }, { data: myAwards }] = await Promise.all([
     admin.from("reward_requests")
-      .select("id, status, candidate_name, requirement_title, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
+      .select("id, source, status, candidate_name, requirement_title, amount, currency, closed_rate, closed_rate_currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
       .eq("recruiter_id", user.id).order("created_at", { ascending: false }),
     computeRecruiterMetrics(admin, user.id, today),
     supabase.from("badges").select("*").eq("is_active", true).order("sort_order"),
@@ -67,7 +68,7 @@ export default async function RewardsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase text-muted">
-                  <tr><th className="py-2 pr-3">Candidate / closure</th><th className="pr-3 text-right">Amount</th><th className="pr-3">Status</th><th>Updated</th></tr>
+                  <tr><th className="py-2 pr-3">Candidate / closure</th><th className="pr-3">Closed rate</th><th className="pr-3 text-right">Incentive</th><th className="pr-3">Status</th><th>Updated</th></tr>
                 </thead>
                 <tbody>
                   {reqs.map((r) => {
@@ -78,6 +79,11 @@ export default async function RewardsPage() {
                           <div className="font-medium">{r.candidate_name ?? r.note ?? "—"}</div>
                           {r.requirement_title && <div className="text-xs text-muted">{r.requirement_title}</div>}
                           {r.hr_comment && <div className="mt-0.5 text-xs text-danger-600">“{r.hr_comment}”</div>}
+                        </td>
+                        <td className="pr-3">
+                          {r.source === "closure"
+                            ? <ClosedRateEditor id={r.id} value={r.closed_rate != null ? Number(r.closed_rate) : null} currency={r.closed_rate_currency === "USD" ? "USD" : "INR"} />
+                            : <span className="text-muted">—</span>}
                         </td>
                         <td className="pr-3 text-right font-medium">{money(r.amount, r.currency)}</td>
                         <td className="pr-3"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span></td>

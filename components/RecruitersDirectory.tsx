@@ -129,7 +129,7 @@ function Row({ r, mintLink }: { r: Recruiter; mintLink: (id: string) => Promise<
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 sm:w-auto">
           <Stat label="Submissions" value={r.submissions} />
           <Stat label="Closures" value={r.closures} />
           <Stat label="Open reqs" value={r.active_reqs} />

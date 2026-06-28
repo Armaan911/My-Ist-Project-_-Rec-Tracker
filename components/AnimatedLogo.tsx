@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-// Animated Podium logo (ported from the provided HTML): globe image + CSS "Podıum"
-// wordmark in Sora, with a red dot that launches from the globe, bounces across P-o-d,
-// and settles as the dot of the "ı". Geometry is measured from the rendered letters, so
-// it adapts to the `size` (word font px) — compact in the nav, larger on login. Replays
-// every 15s; respects reduced-motion (dot just rests on the "i").
+// Animated Podium logo: a CSS "Podıum" wordmark in Sora, with a red dot that drops in
+// from above the "P", bounces across P-o-d, and settles as the dot of the "ı". Geometry
+// is measured from the rendered letters, so it adapts to the `size` (word font px) —
+// compact in the nav, larger on login. Replays every 15s; respects reduced-motion
+// (dot just rests on the "i").
 export default function AnimatedLogo({ size = 30, slogan = true, className = "" }: { size?: number; slogan?: boolean; className?: string }) {
   const wordRef = useRef<HTMLSpanElement>(null);
   const dotRef = useRef<HTMLSpanElement>(null);
-  const globeRef = useRef<HTMLImageElement>(null);
   const pRef = useRef<HTMLSpanElement>(null);
   const oRef = useRef<HTMLSpanElement>(null);
   const dRef = useRef<HTMLSpanElement>(null);
@@ -17,9 +16,9 @@ export default function AnimatedLogo({ size = 30, slogan = true, className = "" 
 
   useEffect(() => {
     const fs = size;
-    const word = wordRef.current, dot = dotRef.current, globe = globeRef.current;
+    const word = wordRef.current, dot = dotRef.current;
     const P = pRef.current, o = oRef.current, d = dRef.current, i = iRef.current;
-    if (!word || !dot || !globe || !P || !o || !d || !i) return;
+    if (!word || !dot || !P || !o || !d || !i) return;
 
     let anim: Animation | null = null;
     let r = 0;
@@ -38,8 +37,8 @@ export default function AnimatedLogo({ size = 30, slogan = true, className = "" 
         { x: cx(d), y: top(d) + 0.16 * fs - r },
       ];
       const tittle = { x: cx(i), y: top(i) - 0.07 * fs };
-      const gr = globe.getBoundingClientRect();
-      const start = { x: gr.left - br.left + gr.width / 2, y: gr.top - br.top + gr.height / 2 };
+      // Dot drops in from just above the "P" (no globe to launch from anymore).
+      const start = { x: cx(P), y: top(P) - 0.8 * fs };
       pts = [start, ...targets, tittle];
       apex = [0, fs * 0.5, fs * 0.45, fs * 0.55, fs * 0.42];
     };
@@ -102,11 +101,9 @@ export default function AnimatedLogo({ size = 30, slogan = true, className = "" 
     };
   }, [size]);
 
-  const globeH = Math.round(size * 1.86);
   const sloganPx = Math.max(7, Math.round(size * 0.2));
   return (
-    <span className={`inline-flex items-center ${className}`} style={{ gap: Math.round(size * 0.36) }}>
-      <img ref={globeRef} src="/globe.png" alt="" aria-hidden draggable={false} style={{ height: globeH, width: "auto", display: "block" }} />
+    <span className={`inline-flex items-center ${className}`}>
       <span className="flex flex-col" style={{ gap: Math.max(2, Math.round(size * 0.06)) }}>
         <span ref={wordRef} className="relative inline-flex font-display font-extrabold leading-none"
           style={{ fontSize: size, letterSpacing: "-0.03em", paddingTop: Math.round(size * 0.1) }}>

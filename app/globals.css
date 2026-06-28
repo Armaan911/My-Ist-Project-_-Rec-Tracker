@@ -80,7 +80,7 @@
   .animate-ticker { animation: ticker 30s linear infinite; }
   .animate-ticker:hover { animation-play-state: paused; }
 
-  /* Podium logo — animated red i-dot: flies in from the globe side and bounces onto the "i". */
+  /* Podium logo — animated red i-dot: drops in from above and bounces onto the "i". */
   @keyframes idotDrop {
     0%   { top: 34%; left: 22%; opacity: 0; transform: translate(-50%,-50%) scale(.4); }
     18%  { opacity: 1; }

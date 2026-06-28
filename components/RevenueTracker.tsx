@@ -7,6 +7,7 @@ import { setRevenueValue } from "@/app/manager/revenue/actions";
 type Closure = {
   id: string; recruiterId: string; recruiter: string; candidate: string; requirement: string; date: string;
   incentive: number | null; incentiveCurrency: string; revenueValue: number | null; revenueCurrency: string;
+  closedRate: number | null; closedRateCurrency: string;
 };
 
 const TIMEOUT_SECONDS = 120; // page locks after 2 minutes
@@ -67,7 +68,7 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Revenue tracker</h1>
-          <p className="text-sm text-muted">Placement value generated per recruiter. Visible to managers only.</p>
+          <p className="text-sm text-muted">Revenue is the profit you record per closure. Recruiters enter the closed rate; you set the profit. Visible to managers only.</p>
         </div>
         <div className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${left <= 20 ? "border-danger-600/40 bg-danger-50 text-danger-600" : "border-line text-muted"}`}>
           Auto-locks in {mm}:{ss}
@@ -95,7 +96,7 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-muted">
-                <tr><th className="py-2 pr-3 font-medium">Candidate</th><th className="pr-3 font-medium">Requirement</th><th className="pr-3 font-medium">Closed</th><th className="font-medium">Placement value</th></tr>
+                <tr><th className="py-2 pr-3 font-medium">Candidate</th><th className="pr-3 font-medium">Requirement</th><th className="pr-3 font-medium">Closed</th><th className="pr-3 font-medium">Closed rate</th><th className="font-medium">Profit</th></tr>
               </thead>
               <tbody>
                 {g.items.map((c) => (
@@ -103,6 +104,7 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
                     <td className="py-2 pr-3 font-medium">{c.candidate}</td>
                     <td className="pr-3 text-muted">{c.requirement}</td>
                     <td className="pr-3 text-muted">{c.date}</td>
+                    <td className="pr-3 text-muted">{c.closedRate != null ? money(c.closedRate, c.closedRateCurrency) : "—"}</td>
                     <td><ValueEditor c={c} onSaved={(v, cur) => patch(c.id, v, cur)} /></td>
                   </tr>
                 ))}

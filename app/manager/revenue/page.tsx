@@ -13,7 +13,7 @@ export default async function RevenuePage() {
 
   const admin = createAdminClient();
   const { data: rows } = await admin.from("reward_requests")
-    .select("id, recruiter_id, amount, currency, revenue_value, revenue_currency, status, created_at, submissions(candidate_name, requirements(title))")
+    .select("id, recruiter_id, amount, currency, revenue_value, revenue_currency, closed_rate, closed_rate_currency, status, created_at, submissions(candidate_name, requirements(title))")
     .eq("source", "closure")
     .order("created_at", { ascending: false });
 
@@ -34,6 +34,8 @@ export default async function RevenuePage() {
     incentiveCurrency: r.currency === "USD" ? "USD" : "INR",
     revenueValue: r.revenue_value != null ? Number(r.revenue_value) : null,
     revenueCurrency: r.revenue_currency === "USD" ? "USD" : "INR",
+    closedRate: r.closed_rate != null ? Number(r.closed_rate) : null,
+    closedRateCurrency: r.closed_rate_currency === "USD" ? "USD" : "INR",
   }));
 
   return <RevenueTracker closures={closures} />;
