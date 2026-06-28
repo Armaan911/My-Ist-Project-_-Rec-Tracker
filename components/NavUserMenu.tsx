@@ -39,7 +39,7 @@ export default function NavUserMenu({ userId, name, initialUrl }: { userId: stri
   return (
     <div ref={rootRef} className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-label="Account menu"
-        className="rounded-full ring-2 ring-transparent transition hover:ring-brand-200">
+        className="rounded-full ring-2 ring-transparent transition [@media(hover:hover)]:hover:ring-brand-200">
         {busy
           ? <span className="grid h-9 w-9 place-items-center rounded-full bg-canvas"><Loader2 size={16} className="animate-spin" /></span>
           : <Avatar name={name} src={url} size={36} />}
