@@ -36,7 +36,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
-      <body className="min-h-screen">
+      <body className="min-h-screen overflow-x-clip">
         {children}
         <Footer />
         <Toaster />

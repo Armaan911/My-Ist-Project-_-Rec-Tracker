@@ -75,9 +75,17 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card><div className="text-xs uppercase tracking-wide text-muted">Total revenue (INR)</div><div className="text-2xl font-bold text-success-600">{money(totals.INR, "INR")}</div></Card>
         <Card><div className="text-xs uppercase tracking-wide text-muted">Total revenue (USD)</div><div className="text-2xl font-bold text-success-600">{money(totals.USD, "USD")}</div></Card>
+        <Card>
+          <div className="text-xs uppercase tracking-wide text-muted">Total profit</div>
+          <div className="text-2xl font-bold text-success-600">
+            {totals.INR === 0 && totals.USD === 0
+              ? "—"
+              : `${totals.INR > 0 ? money(totals.INR, "INR") : ""}${totals.INR > 0 && totals.USD > 0 ? " · " : ""}${totals.USD > 0 ? money(totals.USD, "USD") : ""}`}
+          </div>
+        </Card>
       </div>
 
       {groups.length === 0 ? (
