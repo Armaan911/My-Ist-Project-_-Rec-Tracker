@@ -13,9 +13,18 @@ export default async function RevenuePage() {
 
   const admin = createAdminClient();
   const { data: rows } = await admin.from("reward_requests")
-    .select("id, recruiter_id, amount, currency, revenue_value, revenue_currency, closed_rate, closed_rate_currency, status, created_at, submissions(candidate_name, requirements(title))")
+    .select("id, recruiter_id, amount, currency, revenue_value, revenue_currency, status, created_at, submissions(candidate_name, requirements(title))")
     .eq("source", "closure")
     .order("created_at", { ascending: false });
+
+  // Closed rate comes from a newer migration; tolerate it not being applied yet so the
+  // revenue (profit) figures always render even before the column exists.
+  const closedById = new Map<string, { v: number | null; c: string }>();
+  const { data: crRows, error: crErr } = await admin.from("reward_requests")
+    .select("id, closed_rate, closed_rate_currency").eq("source", "closure");
+  if (!crErr) for (const r of (crRows ?? []) as any[]) {
+    closedById.set(r.id, { v: r.closed_rate != null ? Number(r.closed_rate) : null, c: r.closed_rate_currency === "USD" ? "USD" : "INR" });
+  }
 
   const recIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.recruiter_id).filter(Boolean)));
   const { data: recs } = recIds.length
@@ -34,8 +43,8 @@ export default async function RevenuePage() {
     incentiveCurrency: r.currency === "USD" ? "USD" : "INR",
     revenueValue: r.revenue_value != null ? Number(r.revenue_value) : null,
     revenueCurrency: r.revenue_currency === "USD" ? "USD" : "INR",
-    closedRate: r.closed_rate != null ? Number(r.closed_rate) : null,
-    closedRateCurrency: r.closed_rate_currency === "USD" ? "USD" : "INR",
+    closedRate: closedById.get(r.id)?.v ?? null,
+    closedRateCurrency: closedById.get(r.id)?.c ?? "INR",
   }));
 
   return <RevenueTracker closures={closures} />;
