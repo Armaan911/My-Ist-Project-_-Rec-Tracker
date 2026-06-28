@@ -13,7 +13,7 @@ type Closure = {
 const TIMEOUT_SECONDS = 120; // page locks after 2 minutes
 const money = (n: number, cur: string) => (cur === "USD" ? "$" : "₹") + n.toLocaleString("en-IN");
 
-export default function RevenueTracker({ closures: initial }: { closures: Closure[] }) {
+export default function RevenueTracker({ closures: initial, canEdit }: { closures: Closure[]; canEdit: boolean }) {
   const [closures, setClosures] = useState<Closure[]>(initial);
   const [left, setLeft] = useState(TIMEOUT_SECONDS);
   const [locked, setLocked] = useState(false);
@@ -113,7 +113,7 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
                     <td className="pr-3 text-muted">{c.requirement}</td>
                     <td className="pr-3 text-muted">{c.date}</td>
                     <td className="pr-3 text-muted">{c.closedRate != null ? money(c.closedRate, c.closedRateCurrency) : "—"}</td>
-                    <td><ValueEditor c={c} onSaved={(v, cur) => patch(c.id, v, cur)} /></td>
+                    <td><ValueEditor c={c} canEdit={canEdit} onSaved={(v, cur) => patch(c.id, v, cur)} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -125,8 +125,12 @@ export default function RevenueTracker({ closures: initial }: { closures: Closur
   );
 }
 
-function ValueEditor({ c, onSaved }: { c: Closure; onSaved: (v: number | null, cur: string) => void }) {
-  const [val, setVal] = useState(c.revenueValue != null ? String(c.revenueValue) : "");
+function ValueEditor({ c, canEdit, onSaved }: { c: Closure; canEdit: boolean; onSaved: (v: number | null, cur: string) => void }) {
+  const hasValue = c.revenueValue != null;
+  // Managers land in edit mode only when nothing's saved yet; otherwise it shows "Saved"
+  // with an Edit button. Admins (and anyone without edit rights) are always read-only.
+  const [editing, setEditing] = useState(canEdit && !hasValue);
+  const [val, setVal] = useState(hasValue ? String(c.revenueValue) : "");
   const [cur, setCur] = useState(c.revenueCurrency || "INR");
   const [busy, setBusy] = useState(false);
   const dirty = (val.trim() === "" ? null : Number(val)) !== c.revenueValue || cur !== c.revenueCurrency;
@@ -138,9 +142,25 @@ function ValueEditor({ c, onSaved }: { c: Closure; onSaved: (v: number | null, c
     const res = await setRevenueValue(c.id, num, cur);
     setBusy(false);
     if (!res.ok) { toast(res.error ?? "Failed to save", "error"); return; }
-    onSaved(num, cur); toast("Revenue saved", "success");
+    onSaved(num, cur); setEditing(false); toast("Profit saved", "success");
   }
 
+  // Saved / read-only view: the amount, a "Saved" pill, and (managers only) an Edit button.
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-2 py-1">
+        <span className="font-medium">{hasValue ? money(c.revenueValue!, c.revenueCurrency) : "—"}</span>
+        {hasValue && <span className="rounded-full bg-success-50 px-2 py-0.5 text-xs font-medium text-success-600">Saved</span>}
+        {canEdit && (
+          <button onClick={() => setEditing(true)} className="rounded-md border border-line px-2 py-0.5 text-xs text-muted hover:border-brand-300 hover:text-ink">
+            {hasValue ? "Edit" : "Add profit"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // Edit view (managers only).
   return (
     <div className="flex items-center gap-1.5 py-1">
       <select value={cur} onChange={(e) => setCur(e.target.value)} className="h-8 rounded-md border border-line bg-surface px-1 text-xs">
@@ -152,6 +172,12 @@ function ValueEditor({ c, onSaved }: { c: Closure; onSaved: (v: number | null, c
         className="h-8 rounded-md bg-brand-600 px-2.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-40">
         {busy ? "…" : "Save"}
       </button>
+      {hasValue && (
+        <button onClick={() => { setVal(String(c.revenueValue)); setCur(c.revenueCurrency); setEditing(false); }}
+          className="h-8 rounded-md border border-line px-2 text-xs text-muted hover:text-ink">
+          Cancel
+        </button>
+      )}
     </div>
   );
 }

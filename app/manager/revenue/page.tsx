@@ -47,5 +47,6 @@ export default async function RevenuePage() {
     closedRateCurrency: closedById.get(r.id)?.c ?? "INR",
   }));
 
-  return <RevenueTracker closures={closures} />;
+  // Both managers and admins can view; only managers can edit the profit values.
+  return <RevenueTracker closures={closures} canEdit={me.role === "manager"} />;
 }

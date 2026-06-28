@@ -3,10 +3,10 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
 
-// Managers (and admins as superusers) record the placement/revenue value for a closure.
+// Only managers record the profit value for a closure (admins are view-only).
 export async function setRevenueValue(rewardId: string, value: number | null, currency: string) {
   const me = await getProfile();
-  if (me?.role !== "manager" && me?.role !== "admin") return { ok: false, error: "Not authorized" };
+  if (me?.role !== "manager") return { ok: false, error: "Only managers can edit profit." };
   const cur = currency === "USD" ? "USD" : "INR";
   const clean = value == null || isNaN(value) ? null : Math.max(0, value);
   const admin = createAdminClient();
