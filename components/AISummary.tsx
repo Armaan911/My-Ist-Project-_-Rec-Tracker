@@ -19,10 +19,13 @@ export default function AISummary() {
   useEffect(() => { load(); }, []);
 
   const ok = !!text && !isErrorish(text);
-  const message = ok
+  // On error, show the real reason (e.g. "GEMINI_API_KEY is not set", "API key not valid")
+  // so it's actually fixable — this banner is manager/admin-only.
+  const message = busy
+    ? "Generating today’s highlights…"
+    : ok
     ? text!.replace(/\s+/g, " ").trim()
-    : busy ? "Generating today’s highlights…"
-    : "Highlights will appear here once AI is available — tap ↻ to retry.";
+    : (text?.replace(/\s+/g, " ").trim() || "Highlights will appear here once AI is available — tap ↻ to retry.");
 
   return (
     <div className="flex items-stretch overflow-hidden rounded-xl border border-brand-100 bg-surface shadow-sm">
