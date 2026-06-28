@@ -35,7 +35,7 @@ export default async function RewardsPage() {
   const admin = createAdminClient();
   const [{ data: requests }, metrics, { data: allBadges }, { data: myAwards }] = await Promise.all([
     admin.from("reward_requests")
-      .select("id, source, status, candidate_name, requirement_title, amount, currency, closed_rate, closed_rate_currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
+      .select("id, source, status, candidate_name, requirement_title, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
       .eq("recruiter_id", user.id).order("created_at", { ascending: false }),
     computeRecruiterMetrics(admin, user.id, today),
     supabase.from("badges").select("*").eq("is_active", true).order("sort_order"),
@@ -50,6 +50,15 @@ export default async function RewardsPage() {
   });
 
   const reqs = (requests ?? []) as any[];
+
+  // Closed rate comes from a newer migration; fetch it tolerantly so the page still
+  // renders (and incentives still show) even before the column is applied.
+  const { data: crRows, error: crErr } = await admin.from("reward_requests")
+    .select("id, closed_rate, closed_rate_currency").eq("recruiter_id", user.id);
+  if (!crErr) {
+    const crBy = new Map((((crRows ?? []) as any[]).map((r) => [r.id, r])));
+    for (const r of reqs) { const c = crBy.get(r.id); r.closed_rate = c?.closed_rate ?? null; r.closed_rate_currency = c?.closed_rate_currency ?? "INR"; }
+  }
 
   return (
     <>
