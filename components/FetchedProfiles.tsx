@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, Modal } from "@/components/ui";
 import { toast } from "@/components/uikit";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +16,18 @@ type FP = {
 export default function FetchedProfiles({ items }: { items: FP[] }) {
   const [list, setList] = useState<FP[]>(items);
   const [open, setOpen] = useState<FP | null>(null);
-  const pg = usePaged(list, 20);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const q = query.trim().toLowerCase();
+  const filtered = useMemo(() => list.filter((p) => {
+    if (status !== "all" && p.status !== status) return false;
+    if (q) {
+      const hay = [p.candidate_name, p.requirement_title, p.location, p.email, p.ownership, statusLabel(p.status)].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }), [list, q, status]);
+  const pg = usePaged(filtered, 20);
   if (list.length === 0) return null;
 
   function patch(id: string, p: Partial<FP>) {
@@ -26,8 +37,19 @@ export default function FetchedProfiles({ items }: { items: FP[] }) {
 
   return (
     <Card>
-      <h2 className="mb-1 text-lg font-semibold">AI-team fetched profiles</h2>
-      <p className="mb-3 text-sm text-muted">Sourced by the AI team and assigned to you. Click a row for full details, add a resume, and keep the status updated.</p>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">AI-team fetched profiles</h2>
+          <p className="text-sm text-muted">Sourced by the AI team and assigned to you. Click a row for full details, add a resume, and keep the status updated.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search candidates or requirement…" className="h-9 w-56 rounded-lg border border-line bg-surface px-3 text-sm" />
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm">
+            <option value="all">All statuses</option>
+            {FETCHED_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase text-muted"><tr><th className="py-2 pr-3">Candidate</th><th className="pr-3">Requirement</th><th className="pr-3">Location</th><th>Status</th></tr></thead>
@@ -40,6 +62,7 @@ export default function FetchedProfiles({ items }: { items: FP[] }) {
                 <td><span className="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium" style={{ color: statusColor(p.status), background: statusColor(p.status) + "1a" }}>{statusLabel(p.status)}</span></td>
               </tr>
             ))}
+            {filtered.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-muted">No candidates match.</td></tr>}
           </tbody>
         </table>
       </div>

@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui";
 import { toast } from "@/components/uikit";
 import { createClient } from "@/lib/supabase/client";
-import { FETCHED_STATUSES, statusColor } from "@/lib/fetchedProfiles";
+import { FETCHED_STATUSES, statusColor, statusLabel } from "@/lib/fetchedProfiles";
 import { aiUpdateProfile, aiSetResume } from "@/app/ai/actions";
 import { usePaged, Pager } from "@/components/Pager";
 
@@ -34,15 +34,18 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
     return list;
   }, [rows]);
 
-  const jdOptions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return q ? jds.filter((j) => j.title.toLowerCase().includes(q)) : jds;
-  }, [jds, query]);
-
-  const selected = jd !== "";
-  const filtered = useMemo(() => (!selected ? [] : rows.filter((r) =>
-    (jd === "none" ? !r.requirement_id : r.requirement_id === jd) &&
-    (status === "all" || r.status === status))), [rows, jd, status, selected]);
+  const q = query.trim().toLowerCase();
+  const show = jd !== "" || q !== "";
+  const filtered = useMemo(() => (!show ? [] : rows.filter((r) => {
+    if (jd !== "" && (jd === "none" ? !!r.requirement_id : r.requirement_id !== jd)) return false;
+    if (status !== "all" && r.status !== status) return false;
+    if (q) {
+      const hay = [r.candidate_name, r.email, r.location, r.ownership, r.phone, r.linkedin_url, r.requirement_title, statusLabel(r.status)]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  })), [rows, jd, status, q, show]);
   const pg = usePaged(filtered, 20);
 
   function patch(id: string, p: Partial<FP>) { setRows((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))); }
@@ -52,15 +55,15 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">Parsed candidates</h2>
-          <p className="text-sm text-muted">Pick a job role to view its candidates. Click any cell to edit.</p>
+          <p className="text-sm text-muted">Search or pick a job role to view candidates. Click any cell to edit.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search job roles…" className="h-9 w-44 rounded-lg border border-line bg-surface px-3 text-sm" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search candidates or job role…" className="h-9 w-56 rounded-lg border border-line bg-surface px-3 text-sm" />
           <select value={jd} onChange={(e) => setJd(e.target.value)} className="h-9 min-w-[12rem] rounded-lg border border-line bg-surface px-2 text-sm">
             <option value="">— select a job role —</option>
-            {jdOptions.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
+            {jds.map((q) => <option key={q.id} value={q.id}>{q.title}</option>)}
           </select>
-          {selected && (
+          {show && (
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm">
               <option value="all">All statuses</option>
               {FETCHED_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -69,8 +72,8 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
         </div>
       </div>
 
-      {!selected ? (
-        <p className="py-10 text-center text-sm text-muted">Select a job role above to view its sourced candidates.</p>
+      {!show ? (
+        <p className="py-10 text-center text-sm text-muted">Pick a job role or type in the search box to view candidates.</p>
       ) : (
         <>
           <div className="overflow-x-auto">

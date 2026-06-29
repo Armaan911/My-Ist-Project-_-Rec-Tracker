@@ -54,7 +54,7 @@ export default function LoginPage() {
             {/* curled red & blue cello-tape strips holding the logo in place */}
             <span className="tape tape-red pointer-events-none absolute -left-5 -top-3.5 -rotate-12" />
             <span className="tape tape-blue pointer-events-none absolute -right-5 -top-3.5 rotate-12" />
-            <AnimatedLogo size={38} />
+            <AnimatedLogo size={48} />
           </div>
           <p className="mt-6 max-w-xs text-sm text-muted">Track your desk, your team and every closure — all in one place.</p>
         </div>
