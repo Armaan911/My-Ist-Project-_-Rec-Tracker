@@ -5,12 +5,12 @@ import { loadClosureRevenue } from "@/lib/revenueData";
 
 export const dynamic = "force-dynamic";
 
-export default async function RevenuePage() {
+// HR manages the contract revenue too (monthly profit × duration per closure).
+export default async function HrRevenuePage() {
   const me = await getProfile();
   if (!me) redirect("/login");
-  // Revenue is visible to managers and admins; managers edit, admins view.
-  if (me.role !== "manager" && me.role !== "admin") redirect("/manager");
+  if (me.role !== "hr" && me.role !== "admin") redirect("/dashboard");
 
   const closures = await loadClosureRevenue();
-  return <RevenueTracker closures={closures} canEdit={me.role === "manager"} />;
+  return <RevenueTracker closures={closures} canEdit={me.role === "hr" || me.role === "admin"} />;
 }
