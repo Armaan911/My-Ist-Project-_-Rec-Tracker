@@ -34,7 +34,7 @@ export default function InstallPrompt() {
 
     // iOS (every browser there is WebKit) has no beforeinstallprompt — guide the manual install.
     const manual: "ios" | "mac" | null = isIOS ? "ios" : isMac && isSafari ? "mac" : null;
-    if (manual) setPlatform(manual);
+    if (manual) { setPlatform(manual); setShowSteps(true); } // show the steps up-front on iOS/Mac
 
     const dismissed = () => { try { return sessionStorage.getItem(DISMISS_KEY) === "1"; } catch { return false; } };
     const clearDismiss = () => { try { sessionStorage.removeItem(DISMISS_KEY); } catch { /* ignore */ } };
