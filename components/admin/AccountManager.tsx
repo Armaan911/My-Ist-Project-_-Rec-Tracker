@@ -7,7 +7,7 @@ import { toast } from "@/components/uikit";
 import ImageUpload from "@/components/ImageUpload";
 
 type Division = { id: string; name: string };
-type Profile = { id: string; full_name: string; email: string; role: string; division_id: string | null; division_ids?: string[]; monthly_submission_target: number | null; is_active: boolean; avatar_url?: string | null; is_coordinator?: boolean };
+type Profile = { id: string; full_name: string; email: string; role: string; division_id: string | null; division_ids?: string[]; monthly_submission_target: number | null; is_active: boolean; avatar_url?: string | null; is_coordinator?: boolean; can_import_submissions?: boolean };
 
 const ROLES = [
   { value: "recruiter", label: "Recruiter", desc: "Logs daily activity and submissions, tracks their own pipeline." },
@@ -258,6 +258,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
   const [active, setActive] = useState(person.is_active);
   const [avatar, setAvatar] = useState<string | null>(person.avatar_url ?? null);
   const [coordinator, setCoordinator] = useState(!!person.is_coordinator);
+  const [importSubs, setImportSubs] = useState(!!person.can_import_submissions);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const needsDivision = role !== "admin" && role !== "hr" && role !== "ai_team";
@@ -287,7 +288,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
     setErr(null);
     if (needsDivision && divIds.length === 0) return setErr("Recruiters and managers need at least one division.");
     setSaving(true);
-    const res = await updateAccount({ id: person.id, role: role as any, division_ids: needsDivision ? divIds : [], monthly_submission_target: target ? Number(target) : null, is_active: active, avatar_url: avatar, is_coordinator: role === "recruiter" ? coordinator : false });
+    const res = await updateAccount({ id: person.id, role: role as any, division_ids: needsDivision ? divIds : [], monthly_submission_target: target ? Number(target) : null, is_active: active, avatar_url: avatar, is_coordinator: role === "recruiter" ? coordinator : false, can_import_submissions: role === "recruiter" ? importSubs : false });
     setSaving(false);
     if (!res.ok) return setErr(res.error!);
     onClose();
@@ -318,6 +319,15 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
             <button type="button" role="switch" aria-checked={coordinator} onClick={() => setCoordinator(!coordinator)}
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${coordinator ? "bg-brand-600" : "bg-line"}`}>
               <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${coordinator ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+            </button>
+          </div>
+        )}
+        {role === "recruiter" && (
+          <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm">
+            <span>Can <b>import past submissions</b> from a sheet/CSV</span>
+            <button type="button" role="switch" aria-checked={importSubs} onClick={() => setImportSubs(!importSubs)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${importSubs ? "bg-brand-600" : "bg-line"}`}>
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${importSubs ? "translate-x-[22px]" : "translate-x-0.5"}`} />
             </button>
           </div>
         )}

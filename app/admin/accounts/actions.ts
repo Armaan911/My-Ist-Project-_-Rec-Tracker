@@ -59,7 +59,7 @@ export async function createAccount(input: {
 
 export async function updateAccount(input: {
   id: string; role: "admin" | "manager" | "recruiter" | "hr" | "ai_team"; division_ids: string[]; monthly_submission_target: number | null; is_active: boolean; avatar_url?: string | null;
-  is_coordinator?: boolean;
+  is_coordinator?: boolean; can_import_submissions?: boolean;
 }) {
   const me = await getProfile();
   if (me?.role !== "admin") return { ok: false, error: "Not authorized" };
@@ -71,6 +71,7 @@ export async function updateAccount(input: {
   const patch: any = {
     role: input.role, division_id: primary, monthly_submission_target: input.monthly_submission_target, is_active: input.is_active,
     is_coordinator: input.role === "recruiter" ? !!input.is_coordinator : false,
+    can_import_submissions: input.role === "recruiter" ? !!input.can_import_submissions : false,
   };
   if (input.avatar_url !== undefined) patch.avatar_url = input.avatar_url;
 

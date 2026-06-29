@@ -7,7 +7,7 @@ export default async function AccountsPage() {
   const supabase = createClient();
   const [{ data: divisions }, { data: profiles }, { data: pd }] = await Promise.all([
     supabase.from("divisions").select("id, name").order("name"),
-    supabase.from("profiles").select("id, full_name, email, role, division_id, monthly_submission_target, is_active, avatar_url, is_coordinator").order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, division_id, monthly_submission_target, is_active, avatar_url, is_coordinator, can_import_submissions").order("full_name"),
     supabase.from("profile_divisions").select("profile_id, division_id"),
   ]);
 

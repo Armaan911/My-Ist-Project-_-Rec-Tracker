@@ -5,7 +5,7 @@ export async function getProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
-    .from("profiles").select("id, full_name, role, division_id, avatar_url, is_coordinator").eq("id", user.id).single();
+    .from("profiles").select("id, full_name, role, division_id, avatar_url, is_coordinator, can_import_submissions").eq("id", user.id).single();
   return data;
 }
 

@@ -16,6 +16,7 @@ import NavBar from "@/components/NavBar";
 import MedalShowcase from "@/components/MedalShowcase";
 import FloatingMessages from "@/components/FloatingMessages";
 import FetchedProfiles from "@/components/FetchedProfiles";
+import RecruiterImport from "@/components/RecruiterImport";
 import ManagerMyDay from "@/components/ManagerMyDay";
 import BadgeCelebration from "@/components/BadgeCelebration";
 import { Card } from "@/components/ui";
@@ -162,6 +163,12 @@ export default async function Dashboard() {
       <div className="space-y-6">
         <FloatingMessages messages={(messages as any) ?? []} />
         <FetchedProfiles items={fetchedProfiles} />
+        {(profile as any)?.can_import_submissions && (
+          <RecruiterImport
+            requirements={(reqs ?? []).map((r: any) => ({ id: r.id, title: r.title, job_code: r.job_code }))}
+            statuses={((statuses as any) ?? []).map((s: any) => ({ id: s.id, label: s.label }))}
+          />
+        )}
         <SubmissionsPanel
           requirements={reqs}
           statuses={statuses ?? []}

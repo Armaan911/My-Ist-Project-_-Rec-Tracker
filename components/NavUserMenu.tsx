@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, Trash2, KeyRound, Loader2 } from "lucide-react";
+import { Camera, Trash2, KeyRound, Loader2, Moon, Sun } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { setMyAvatar } from "@/app/account/actions";
 import { Avatar } from "@/components/ui";
@@ -14,6 +14,14 @@ export default function NavUserMenu({ userId, name, initialUrl }: { userId: stri
   const [busy, setBusy] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dark, setDark] = useState(false);
+  useEffect(() => { setDark(document.documentElement.classList.contains("dark")); }, []);
+  function toggleTheme() {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch { /* ignore */ }
+    setDark(next); setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +65,9 @@ export default function NavUserMenu({ userId, name, initialUrl }: { userId: stri
           <Link href="/security" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-canvas">
             <KeyRound size={14} /> Reset password
           </Link>
+          <button onClick={toggleTheme} className="flex w-full items-center gap-2 border-t border-line px-3 py-2 text-left text-sm text-ink hover:bg-canvas">
+            {dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? "Light mode" : "Dark mode"}
+          </button>
         </div>
       )}
       <input ref={inputRef} type="file" accept="image/*" className="hidden"
