@@ -15,7 +15,7 @@ export default async function AiDashboard() {
     admin.from("profiles").select("id, full_name").eq("role", "recruiter").eq("is_active", true).order("full_name"),
     admin.from("fetched_profiles")
       .select("id, candidate_name, linkedin_url, location, email, phone, open_to_work, ownership, status, resume_url, recruiter_comment, requirement_id, created_at, requirements(title, divisions(name))")
-      .eq("ai_team_id", me?.id).order("created_at", { ascending: false }).limit(2000),
+      .eq("owner_id", me?.id).order("created_at", { ascending: false }).limit(2000),
   ]);
 
   const mineRows = (mine ?? []) as any[];

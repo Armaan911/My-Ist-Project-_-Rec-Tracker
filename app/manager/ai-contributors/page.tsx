@@ -10,16 +10,16 @@ export default async function AiContributorsPage() {
   const admin = createAdminClient();
   const [{ data: profs }, { data: fps }] = await Promise.all([
     admin.from("profiles").select("id, full_name").eq("role", "ai_team"),
-    admin.from("fetched_profiles").select("ai_team_id, requirement_id, status, requirements(title, divisions(name))"),
+    admin.from("fetched_profiles").select("owner_id, requirement_id, status, requirements(title, divisions(name))"),
   ]);
   const nameById = new Map(((profs ?? []) as any[]).map((p) => [p.id, p.full_name]));
 
   const agg = new Map<string, any>();
   for (const f of (fps ?? []) as any[]) {
-    if (!f.ai_team_id) continue;
-    const key = `${f.ai_team_id}|${f.requirement_id ?? "none"}`;
+    if (!f.owner_id) continue;
+    const key = `${f.owner_id}|${f.requirement_id ?? "none"}`;
     const row = agg.get(key) ?? {
-      contributor: nameById.get(f.ai_team_id) ?? "—",
+      contributor: nameById.get(f.owner_id) ?? "—",
       jobRole: f.requirement_id ? ((f.requirements as any)?.title ?? "Untitled") : "No JD",
       division: (f.requirements as any)?.divisions?.name ?? "—",
       submitted: 0, approved: 0, internal: 0, client: 0,

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui";
 import { toast } from "@/components/uikit";
 import { createClient } from "@/lib/supabase/client";
 import { FETCHED_STATUSES, statusColor, statusLabel } from "@/lib/fetchedProfiles";
-import { aiUpdateProfile, aiSetResume } from "@/app/ai/actions";
+import { aiUpdateProfile, aiSetResume, aiDeleteProfiles } from "@/app/ai/actions";
 import { usePaged, Pager } from "@/components/Pager";
 
 type FP = {
@@ -49,6 +49,14 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
   const pg = usePaged(filtered, 20);
 
   function patch(id: string, p: Partial<FP>) { setRows((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))); }
+  async function deleteRows(ids: string[]) {
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} candidate${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+    const res = await aiDeleteProfiles(ids);
+    if (!res.ok) { toast(res.error ?? "Delete failed", "error"); return; }
+    setRows((xs) => xs.filter((x) => !ids.includes(x.id)));
+    toast(`Deleted ${res.count} candidate${res.count === 1 ? "" : "s"}`, "success");
+  }
 
   return (
     <Card>
@@ -69,6 +77,9 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
               {FETCHED_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           )}
+          {show && filtered.length > 0 && (
+            <button onClick={() => deleteRows(filtered.map((r) => r.id))} className="h-9 rounded-lg border border-danger-600/40 px-3 text-sm font-medium text-danger-600 hover:bg-danger-50">Delete {filtered.length} shown</button>
+          )}
         </div>
       </div>
 
@@ -80,14 +91,14 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-muted">
                 <tr>
-                  {["Name", "LinkedIn", "Parsed on", "Location", "Email", "Phone", "Open2work", "Status", "Ownership", "Resume"].map((h) => (
-                    <th key={h} className="px-2 py-2 font-medium">{h}</th>
+                  {["Name", "LinkedIn", "Parsed on", "Location", "Email", "Phone", "Open2work", "Status", "Ownership", "Resume", ""].map((h, i) => (
+                    <th key={i} className="px-2 py-2 font-medium">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {pg.slice.map((r) => <AiRow key={r.id} r={r} onPatch={patch} />)}
-                {filtered.length === 0 && <tr><td colSpan={10} className="py-6 text-center text-muted">No candidates for this job role / filter.</td></tr>}
+                {pg.slice.map((r) => <AiRow key={r.id} r={r} onPatch={patch} onDelete={() => deleteRows([r.id])} />)}
+                {filtered.length === 0 && <tr><td colSpan={11} className="py-6 text-center text-muted">No candidates for this job role / filter.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -98,7 +109,7 @@ export default function AiCandidates({ candidates }: { candidates: FP[] }) {
   );
 }
 
-function AiRow({ r, onPatch }: { r: FP; onPatch: (id: string, p: Partial<FP>) => void }) {
+function AiRow({ r, onPatch, onDelete }: { r: FP; onPatch: (id: string, p: Partial<FP>) => void; onDelete: () => void }) {
   const [uploading, setUploading] = useState(false);
 
   async function saveField(field: keyof FP, value: any) {
@@ -172,6 +183,9 @@ function AiRow({ r, onPatch }: { r: FP; onPatch: (id: string, p: Partial<FP>) =>
           </label>
           {r.resume_url && <button onClick={removeResume} className="rounded border border-danger-600/30 px-1.5 py-0.5 text-xs text-danger-600 hover:bg-danger-50">delete</button>}
         </div>
+      </td>
+      <td className={`${cell} whitespace-nowrap`}>
+        <button onClick={onDelete} title="Delete candidate" className="rounded border border-danger-600/30 px-1.5 py-0.5 text-xs font-medium text-danger-600 hover:bg-danger-50">Delete</button>
       </td>
     </tr>
   );

@@ -8,6 +8,21 @@ import ExcelJS from "exceljs";
 
 const AI_EDITABLE = ["candidate_name", "linkedin_url", "location", "email", "phone", "open_to_work", "ownership", "status"];
 
+// Resolve the OWNER of a profile from its ownership column → an AI-team member (by name/
+// email/first-name), falling back to the importer so it always shows on someone's desk.
+type OwnerRef = { id: string; name: string; email: string };
+async function loadOwners(admin: ReturnType<typeof createAdminClient>): Promise<OwnerRef[]> {
+  const { data } = await admin.from("profiles").select("id, full_name, email").eq("role", "ai_team");
+  return ((data ?? []) as any[]).map((p) => ({ id: p.id, name: (p.full_name ?? "").toLowerCase(), email: (p.email ?? "").toLowerCase() }));
+}
+function matchOwner(ownership: string | null | undefined, owners: OwnerRef[], fallbackId: string): string {
+  const t = (ownership ?? "").trim().toLowerCase();
+  if (t) for (const o of owners) {
+    if (o.name === t || o.email === t || (o.name && (o.name.startsWith(t + " ") || o.name.split(" ")[0] === t))) return o.id;
+  }
+  return fallbackId;
+}
+
 // AI team / admin edit any field on a parsed candidate (recruiters can only change status).
 export async function aiUpdateProfile(id: string, patch: Record<string, any>) {
   const me = await getProfile();
@@ -20,10 +35,31 @@ export async function aiUpdateProfile(id: string, patch: Record<string, any>) {
   clean.updated_at = now;
   if ("status" in clean) clean.status_changed_at = now;
   const admin = createAdminClient();
+  if ("ownership" in clean) {
+    const owners = await loadOwners(admin);
+    const { data: cur } = await admin.from("fetched_profiles").select("ai_team_id").eq("id", id).maybeSingle();
+    clean.owner_id = matchOwner(clean.ownership, owners, (cur as any)?.ai_team_id ?? me.id);
+  }
   const { error } = await admin.from("fetched_profiles").update(clean).eq("id", id);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath("/ai"); revalidatePath("/dashboard");
   return { ok: true as const };
+}
+
+// AI team / admin delete parsed candidates they own or imported (admins: any). Replacing a
+// sheet = delete + re-import. POC rows cascade.
+export async function aiDeleteProfiles(ids: string[]) {
+  const me = await getProfile();
+  if (!me || (me.role !== "ai_team" && me.role !== "admin")) return { ok: false as const, error: "Not authorized" };
+  const clean = Array.from(new Set((ids ?? []).filter(Boolean)));
+  if (clean.length === 0) return { ok: false as const, error: "Nothing selected to delete." };
+  const admin = createAdminClient();
+  let q = admin.from("fetched_profiles").delete().in("id", clean);
+  if (me.role !== "admin") q = q.or(`owner_id.eq.${me.id},ai_team_id.eq.${me.id}`);
+  const { error } = await q;
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/ai"); revalidatePath("/dashboard");
+  return { ok: true as const, count: clean.length };
 }
 
 // AI team / admin replace or delete a parsed candidate's resume.
@@ -126,10 +162,12 @@ export async function importFetchedProfiles(input: { csvText?: string; link?: st
   if (rows.length === 0) return { ok: false as const, error: "No candidate rows found — check the column headers." };
 
   const admin = createAdminClient();
+  const owners = await loadOwners(admin);
   const inserted: string[] = [];
   for (const r of rows) {
     const { data, error } = await admin.from("fetched_profiles").insert({
       requirement_id: input.requirementId || null, ai_team_id: me.id,
+      owner_id: matchOwner(r.ownership, owners, me.id), // shows on the owner's AI desk (per ownership column)
       candidate_name: r.candidate_name, linkedin_url: r.linkedin_url, location: r.location,
       email: r.email, phone: r.phone, open_to_work: r.open_to_work, ownership: r.ownership,
       status: "yet_to_review", // every imported candidate waits for a recruiter to review

@@ -28,7 +28,7 @@ export default async function AiRewards() {
 
   const admin = createAdminClient();
   const [{ data: mine }, { data: requests }] = await Promise.all([
-    admin.from("fetched_profiles").select("id, status, created_at").eq("ai_team_id", me.id),
+    admin.from("fetched_profiles").select("id, status, created_at").eq("owner_id", me.id),
     admin.from("reward_requests")
       .select("id, status, candidate_name, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
       .eq("recruiter_id", me.id).order("created_at", { ascending: false }),
