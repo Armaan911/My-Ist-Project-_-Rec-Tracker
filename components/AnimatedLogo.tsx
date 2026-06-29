@@ -119,7 +119,7 @@ export default function AnimatedLogo({ size = 30, slogan = true, className = "" 
           <span ref={dotRef} aria-hidden style={{ position: "absolute", left: 0, top: 0, borderRadius: "50%", background: "#e8211a", opacity: 0, willChange: "transform" }} />
         </span>
         {slogan && (
-          <span className="uppercase text-muted" style={{ fontSize: sloganPx, letterSpacing: "0.18em", lineHeight: 1.3 }}>from Conglomerate Corporates</span>
+          <span className="uppercase text-muted" style={{ fontSize: sloganPx, letterSpacing: "0.18em", lineHeight: 1.3 }}>by Conglomerate Corporates</span>
         )}
       </span>
       <span className="sr-only">Podium</span>
