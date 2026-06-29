@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import NavUserMenu from "@/components/NavUserMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 import AnimatedLogo from "@/components/AnimatedLogo";
 
 export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }: { name: string; role: string; userId?: string; avatarUrl?: string | null; isCoordinator?: boolean }) {
@@ -66,6 +67,7 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
           </nav>
         </div>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <NotificationBell />
           <div className="hidden text-right sm:block">
             <div className="text-sm font-semibold leading-tight">{name}</div>

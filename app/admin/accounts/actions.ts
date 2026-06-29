@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { sendEmail } from "@/lib/email";
 
 // Sync a profile's division membership in profile_divisions to exactly `divisionIds`.
 async function syncDivisions(admin: ReturnType<typeof createAdminClient>, profileId: string, divisionIds: string[]) {
@@ -128,20 +129,34 @@ export async function setUserPassword(input: { id: string; password: string }) {
   return { ok: true };
 }
 
-// Admin triggers a password-reset email to the user (they click the link and set their own).
-// Requires email to be configured in Supabase Auth; otherwise use setUserPassword instead.
+// Admin emails the user a unique password-reset link. We generate the recovery link via the
+// admin API and send it through the app's own mailer (Microsoft Graph), so it doesn't depend
+// on Supabase's SMTP being configured. The link lands on /reset, where they set a new password.
 export async function sendPasswordReset(input: { id: string }) {
   const me = await getProfile();
   if (me?.role !== "admin") return { ok: false, error: "Not authorized" };
   const admin = createAdminClient();
 
-  const { data: prof } = await admin.from("profiles").select("email").eq("id", input.id).maybeSingle();
-  const email = (prof as any)?.email;
+  const { data: prof } = await admin.from("profiles").select("email, full_name").eq("id", input.id).maybeSingle();
+  const email = (prof as any)?.email as string | undefined;
+  const name = (prof as any)?.full_name ?? "there";
   if (!email) return { ok: false, error: "No email on file for that account." };
 
   const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/reset`;
-  const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo } });
   if (error) return { ok: false, error: error.message };
+  const link = (gen as any)?.properties?.action_link as string | undefined;
+  if (!link) return { ok: false, error: "Could not generate the reset link." };
+
+  await sendEmail(
+    email,
+    "Reset your Podium password",
+    `<p>Hi ${name},</p>
+     <p>A password reset was requested for your <b>Podium</b> account. Click the button below to set a new password:</p>
+     <p style="margin:20px 0"><a href="${link}" style="background:#068AD3;color:#ffffff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Reset my password</a></p>
+     <p style="font-size:12px;color:#666">If the button doesn't work, paste this link into your browser:<br>${link}</p>
+     <p style="font-size:12px;color:#666">If you didn't expect this, you can safely ignore this email.</p>`,
+  );
 
   await logAudit(me.id, "account.password_reset_sent", "profiles", input.id, { email });
   return { ok: true };

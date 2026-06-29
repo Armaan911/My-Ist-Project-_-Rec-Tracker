@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AvatarWithBadge from "@/components/AvatarWithBadge";
+import { medalFor } from "@/lib/medals";
 import RequestIncentiveButton from "@/components/RequestIncentiveButton";
 import MyGoals from "@/components/MyGoals";
 import { StatCard } from "@/components/uikit";
@@ -87,6 +88,8 @@ export default async function Dashboard() {
   // persistent allocations: active requirements still on the recruiter's plate
   const reqs = allocatedReqs;
   const closuresAll = closuresRow?.closures_all_time ?? 0;
+  // Current medal (bronze/silver/gold…) — colours the ring around the avatar.
+  const medal = medalFor(closuresAll, (tiers as any) ?? []);
 
   // ---- achievement badges ----
   const adminCli = createAdminClient();
@@ -132,10 +135,10 @@ export default async function Dashboard() {
       <NavBar name={profile?.full_name ?? ""} role={profile?.role ?? "recruiter"} userId={user.id} avatarUrl={(profile as any)?.avatar_url ?? null} isCoordinator={(profile as any)?.is_coordinator ?? false} />
       <main className="mx-auto max-w-[1500px] px-3 sm:px-5 lg:px-7 py-8">
       <div className="mb-6 flex items-center gap-4">
-        <AvatarWithBadge userId={user.id} name={profile?.full_name ?? ""} initialUrl={(profile as any)?.avatar_url ?? null} badge={headlineBadge} />
+        <AvatarWithBadge userId={user.id} name={profile?.full_name ?? ""} initialUrl={(profile as any)?.avatar_url ?? null} medalColor={medal?.color ?? null} medalName={medal?.name ?? null} />
         <div>
           <h1 className="text-2xl font-bold">Hi, {profile?.full_name}</h1>
-          <p className="text-sm text-slate-500">Your daily tracker</p>
+          <p className="text-sm text-muted">Your daily tracker</p>
         </div>
         <div className="ml-auto"><RequestIncentiveButton /></div>
       </div>

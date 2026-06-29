@@ -21,14 +21,14 @@ export default function AlertsFeed({ alerts }: { alerts: Alert[] }) {
   }
 
   const color = (sev: string) =>
-    sev === "critical" ? "border-red-300 bg-red-50" : sev === "warning" ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50";
+    sev === "critical" ? "border-danger-600/40 bg-danger-50" : sev === "warning" ? "border-warning-600/40 bg-warning-50" : "border-line bg-canvas";
 
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Alerts</h2>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">{visible.filter((a) => !a.is_read).length} unread</span>
+          <span className="text-xs text-muted">{visible.filter((a) => !a.is_read).length} unread</span>
           {visible.length > 0 && <button onClick={clearAll} className="text-xs font-medium text-brand-700 underline hover:text-brand-800">Clear all</button>}
         </div>
       </div>
@@ -41,10 +41,10 @@ export default function AlertsFeed({ alerts }: { alerts: Alert[] }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">{a.title}</p>
-                  {a.body && <p className="text-xs text-slate-600">{a.body}</p>}
+                  {a.body && <p className="text-xs text-muted">{a.body}</p>}
                 </div>
                 {!a.is_read && (
-                  <button onClick={() => dismiss(a.id)} className="shrink-0 text-xs text-slate-500 underline">mark read</button>
+                  <button onClick={() => dismiss(a.id)} className="shrink-0 text-xs text-muted underline hover:text-ink">mark read</button>
                 )}
               </div>
             </li>

@@ -2,20 +2,22 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Conglomerate IT (CGIT) palette — brand = blue (068ad3), accent = red.
-        ink: "#201116",
-        muted: "#6B6B78",
-        line: "#E9E9EE",
-        surface: "#FFFFFF",
-        canvas: "#F6F6F8",
-        brand: { 25: "#F1F8FD", 50: "#E3F1FB", 100: "#C2E2F4", 200: "#92CBEC", 500: "#2497DA", 600: "#068AD3", 700: "#27439C", 800: "#1C375D" },
-        accent: { 50: "#FCE7E6", 500: "#F30000", 600: "#D10908" },
-        success: { 50: "#E6F6EF", 600: "#0E9F6E" },
-        warning: { 50: "#FBF2E1", 600: "#B7791F" },
-        danger: { 50: "#FCE7E6", 600: "#D63030" },
+        // CGIT palette — brand stays blue/red in both themes; neutrals + tints flip via
+        // CSS variables (light in :root, dark in .dark — see globals.css).
+        ink: "rgb(var(--c-ink) / <alpha-value>)",
+        muted: "rgb(var(--c-muted) / <alpha-value>)",
+        line: "rgb(var(--c-line) / <alpha-value>)",
+        surface: "rgb(var(--c-surface) / <alpha-value>)",
+        canvas: "rgb(var(--c-canvas) / <alpha-value>)",
+        brand: { 25: "#F1F8FD", 50: "rgb(var(--c-brand-50) / <alpha-value>)", 100: "#C2E2F4", 200: "#92CBEC", 500: "#2497DA", 600: "#068AD3", 700: "rgb(var(--c-brand-700) / <alpha-value>)", 800: "#1C375D" },
+        accent: { 50: "rgb(var(--c-accent-50) / <alpha-value>)", 500: "#F30000", 600: "#D10908" },
+        success: { 50: "rgb(var(--c-success-50) / <alpha-value>)", 600: "#0E9F6E" },
+        warning: { 50: "rgb(var(--c-warning-50) / <alpha-value>)", 600: "#B7791F" },
+        danger: { 50: "rgb(var(--c-danger-50) / <alpha-value>)", 600: "#D63030" },
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],

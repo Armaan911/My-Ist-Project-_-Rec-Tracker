@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Spinner } from "@/components/ui";
 import AnimatedLogo from "@/components/AnimatedLogo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative grid min-h-screen place-items-center overflow-hidden bg-gradient-to-br from-canvas via-surface to-brand-50/60 px-4 animate-gradient">
+      <div className="absolute right-4 top-4 z-10"><ThemeToggle className="bg-surface/70 backdrop-blur-sm" /></div>
       {/* Page animation — drifting colour blobs. The logo itself stays still. */}
       <div className="pointer-events-none absolute -left-28 -top-28 h-80 w-80 rounded-full bg-brand-400/30 blur-3xl animate-blob" />
       <div className="pointer-events-none absolute -bottom-28 -right-20 h-96 w-96 rounded-full bg-accent-500/20 blur-3xl animate-blob" style={{ animationDelay: "3s" }} />
@@ -56,7 +58,7 @@ export default function LoginPage() {
             <span className="tape tape-blue pointer-events-none absolute -right-5 -top-3.5 rotate-12" />
             <AnimatedLogo size={48} />
           </div>
-          <p className="mt-6 max-w-xs text-sm text-muted">Track your desk, your team and every closure — all in one place.</p>
+          <p className="mt-6 max-w-xs text-sm text-muted">Track your desk, your team and every closure - all in one place.</p>
         </div>
 
         {/* Right — login card */}
