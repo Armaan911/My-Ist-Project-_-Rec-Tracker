@@ -32,7 +32,7 @@ export default async function Dashboard() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role, division_id, monthly_submission_target, avatar_url")
+    .select("full_name, role, division_id, monthly_submission_target, avatar_url, is_coordinator, can_import_submissions")
     .eq("id", user.id).single();
 
   // HR users live in the incentives dashboard, not the recruiter "My day".
