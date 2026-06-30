@@ -146,6 +146,25 @@ function Mini({ label, value }: { label: string; value: number }) {
   return <Card className="p-4"><div className="text-2xl font-bold">{value}</div><div className="text-xs uppercase tracking-wide text-muted">{label}</div></Card>;
 }
 
+// Polished permission toggle: the whole row is clickable, tints brand when on, with a
+// spring-animated switch (check icon) and a title + helper line.
+function ToggleRow({ on, onChange, title, desc }: { on: boolean; onChange: (v: boolean) => void; title: string; desc?: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
+      className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-200 ${on ? "border-brand-300 bg-brand-50/60" : "border-line hover:bg-canvas"}`}>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-ink">{title}</span>
+        {desc && <span className="mt-0.5 block text-xs text-muted">{desc}</span>}
+      </span>
+      <span className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ease-spring ${on ? "bg-brand-600" : "bg-line"}`}>
+        <span className={`grid h-5 w-5 transform place-items-center rounded-full bg-white text-[9px] font-bold text-brand-700 shadow-sm ring-1 ring-black/5 transition-transform duration-200 ease-spring ${on ? "translate-x-[22px]" : "translate-x-0.5"}`}>
+          {on ? "✓" : ""}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function RolePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="space-y-2">
@@ -231,13 +250,8 @@ function CreateModal({ open, onClose, divisions }: { open: boolean; onClose: () 
           {f.role === "recruiter" && (
             <>
               <div><Label>Monthly submission target (optional)</Label><Input type="number" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })} placeholder="e.g. 25" /></div>
-              <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm">
-                <span>Recruiter with <b>coordinator</b> access</span>
-                <button type="button" role="switch" aria-checked={f.coordinator} onClick={() => setF({ ...f, coordinator: !f.coordinator })}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${f.coordinator ? "bg-brand-600" : "bg-line"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${f.coordinator ? "translate-x-[22px]" : "translate-x-0.5"}`} />
-                </button>
-              </div>
+              <ToggleRow on={f.coordinator} onChange={(v) => setF({ ...f, coordinator: v })}
+                title="Coordinator access" desc="Can verify other recruiters' logs and submissions." />
             </>
           )}
         </div>
@@ -314,22 +328,12 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
         </div>
         <div><Label>Monthly submission target</Label><Input type="number" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="—" /></div>
         {role === "recruiter" && (
-          <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm">
-            <span>Recruiter with <b>coordinator</b> access</span>
-            <button type="button" role="switch" aria-checked={coordinator} onClick={() => setCoordinator(!coordinator)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${coordinator ? "bg-brand-600" : "bg-line"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${coordinator ? "translate-x-[22px]" : "translate-x-0.5"}`} />
-            </button>
-          </div>
+          <ToggleRow on={coordinator} onChange={setCoordinator}
+            title="Coordinator access" desc="Can verify other recruiters' logs and submissions." />
         )}
         {role === "recruiter" && (
-          <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2 text-sm">
-            <span>Can <b>import past submissions</b> from a sheet/CSV</span>
-            <button type="button" role="switch" aria-checked={importSubs} onClick={() => setImportSubs(!importSubs)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${importSubs ? "bg-brand-600" : "bg-line"}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${importSubs ? "translate-x-[22px]" : "translate-x-0.5"}`} />
-            </button>
-          </div>
+          <ToggleRow on={importSubs} onChange={setImportSubs}
+            title="Import past submissions" desc="Can bulk-import previous submissions from a sheet/CSV." />
         )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4 rounded border-line" />

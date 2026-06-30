@@ -5,7 +5,7 @@ import { istDateStr, addDays, prettyDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
-// Runs 03:30 IST (0 22 * * * UTC). Finds active recruiters who didn't log a daily
+// Runs 03:00 IST (30 21 * * * UTC). Finds active recruiters who didn't log a daily
 // update for the day that just ended and notifies: the recruiter ("you haven't…"),
 // their division manager(s) and all admins ("X hasn't…").
 export async function GET(req: Request) {

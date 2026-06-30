@@ -5,7 +5,7 @@
     { "path": "/api/cron/snapshot",          "schedule": "15 2 * * *" },
     { "path": "/api/cron/outlook-subscribe", "schedule": "0 1 * * *" },
     { "path": "/api/cron/evaluate-badges",   "schedule": "30 2 * * *" },
-    { "path": "/api/cron/daily-reminders",   "schedule": "45 2 * * *" },
+    { "path": "/api/cron/daily-reminders",   "schedule": "30 21 * * *" },
     { "path": "/api/cron/fetched-reminders", "schedule": "30 3 * * *" }
   ]
 }
