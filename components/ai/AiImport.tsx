@@ -57,7 +57,7 @@ export default function AiImport({ requirements, recruiters }: { requirements: R
     });
     setImporting(false);
     if (!res.ok) { toast(res.error ?? "Import failed", "error"); return; }
-    toast(`Imported ${res.count} candidate${res.count === 1 ? "" : "s"} → assigned to ${pocs.length} recruiter${pocs.length === 1 ? "" : "s"}`, "success");
+    toast(`Imported ${res.count} candidate${res.count === 1 ? "" : "s"} → assigned to ${pocs.length} recruiter${pocs.length === 1 ? "" : "s"}${res.skipped ? ` · ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"} skipped` : ""}`, res.skipped ? "default" : "success");
     reset();
     router.refresh();
   }

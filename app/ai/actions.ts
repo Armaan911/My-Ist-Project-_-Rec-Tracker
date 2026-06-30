@@ -164,6 +164,7 @@ export async function importFetchedProfiles(input: { csvText?: string; link?: st
   const admin = createAdminClient();
   const owners = await loadOwners(admin);
   const inserted: string[] = [];
+  let skipped = 0; // candidate (LinkedIn) already parsed for this requirement
   for (const r of rows) {
     const { data, error } = await admin.from("fetched_profiles").insert({
       requirement_id: input.requirementId || null, ai_team_id: me.id,
@@ -173,8 +174,9 @@ export async function importFetchedProfiles(input: { csvText?: string; link?: st
       status: "yet_to_review", // every imported candidate waits for a recruiter to review
     }).select("id").single();
     if (!error && data) inserted.push((data as { id: string }).id);
+    else if ((error as { code?: string } | null)?.code === "23505") skipped++;
   }
-  if (inserted.length === 0) return { ok: false as const, error: "Could not save the rows." };
+  if (inserted.length === 0) return { ok: false as const, error: skipped ? `All ${skipped} candidate(s) are already parsed for this requirement (duplicate LinkedIn).` : "Could not save the rows." };
 
   const links = inserted.flatMap((pid) => pocIds.map((rid) => ({ fetched_profile_id: pid, recruiter_id: rid })));
   await admin.from("fetched_profile_pocs").insert(links);
@@ -187,5 +189,5 @@ export async function importFetchedProfiles(input: { csvText?: string; link?: st
 
   revalidatePath("/ai");
   revalidatePath("/dashboard");
-  return { ok: true as const, count: inserted.length };
+  return { ok: true as const, count: inserted.length, skipped };
 }

@@ -59,7 +59,11 @@ export async function createSubmission(input: {
     current_status_id: input.status_id,
     submitted_date: input.submitted_date,
   }).select("id").single();
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    if ((error as { code?: string }).code === "23505")
+      return { ok: false, error: "This candidate has already been submitted for this requirement (same LinkedIn URL)." };
+    return { ok: false, error: error.message };
+  }
 
   await supabase.from("submission_status_history").insert({
     submission_id: sub.id,

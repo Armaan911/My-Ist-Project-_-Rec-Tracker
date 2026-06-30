@@ -36,7 +36,10 @@ export async function createRequirement(_input: { division_id: string; client_id
     division_id: _input.division_id, client_id: _input.client_id || null, title: _input.title, job_code: _input.job_code?.trim() || null,
     positions: _input.positions, priority: _input.priority || null, status: _input.status as any, date_received: _input.date_received,
   }).select("id").single();
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    if ((error as { code?: string }).code === "23505") return { ok: false, error: `A requirement with job code "${_input.job_code?.trim()}" already exists.` };
+    return { ok: false, error: error.message };
+  }
   await logAudit(g.me.id, "requirement.create", "requirements", data.id, { title: _input.title });
   revalidatePath(path);
   return { ok: true };

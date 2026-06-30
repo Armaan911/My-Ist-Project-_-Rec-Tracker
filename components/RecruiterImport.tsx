@@ -41,7 +41,7 @@ export default function RecruiterImport({ requirements, statuses }: { requiremen
     const res = await importPreviousSubmissions({ link: mode === "link" ? link : undefined, csvText: mode === "file" ? csvText : undefined, requirementId: reqId, defaultStatusId: statusId });
     setImporting(false);
     if (!res.ok) { toast(res.error ?? "Import failed", "error"); return; }
-    toast(`Recorded ${res.count} submission${res.count === 1 ? "" : "s"}`, "success");
+    toast(`Recorded ${res.count} submission${res.count === 1 ? "" : "s"}${res.skipped ? ` · ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"} skipped` : ""}`, res.skipped ? "default" : "success");
     setPreview(null); setImported(res.rows); router.refresh();
   }
 

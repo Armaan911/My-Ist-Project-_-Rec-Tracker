@@ -96,6 +96,7 @@ export async function importPreviousSubmissions(input: { csvText?: string; link?
 
   const today = new Date().toISOString().slice(0, 10);
   const created: ImportedSub[] = [];
+  let skipped = 0; // rows whose candidate (LinkedIn) was already submitted for this requirement
   for (const r of rows) {
     const statusId = matchStatus(r.status);
     const date = r.date ?? today;
@@ -112,11 +113,13 @@ export async function importPreviousSubmissions(input: { csvText?: string; link?
         id, candidate_name: r.candidate_name, linkedin_url: r.linkedin, location: r.location,
         email: r.email, phone: r.phone, status: labelById.get(statusId) ?? "—", submitted_date: date, resume_url: null,
       });
+    } else if ((error as { code?: string } | null)?.code === "23505") {
+      skipped++;
     }
   }
-  if (created.length === 0) return { ok: false as const, error: "Could not save any submissions." };
+  if (created.length === 0) return { ok: false as const, error: skipped ? `All ${skipped} candidate(s) were already submitted for this requirement (duplicate LinkedIn).` : "Could not save any submissions." };
   revalidatePath("/dashboard"); revalidatePath("/manager"); revalidatePath("/admin/teams");
-  return { ok: true as const, count: created.length, rows: created };
+  return { ok: true as const, count: created.length, rows: created, skipped };
 }
 
 // Attach/replace a resume on one of the recruiter's own submissions (admins: any).
