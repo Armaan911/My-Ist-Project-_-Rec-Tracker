@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X } from "lucide-react";
+import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X, Activity } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import NavUserMenu from "@/components/NavUserMenu";
 import AnimatedLogo from "@/components/AnimatedLogo";
@@ -29,6 +29,7 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
     { href: "/ai", label: "AI desk", icon: Bot, show: role === "ai_team" },
     // Admins get their own Teams area; managers stay on /manager.
     { href: isAdmin ? "/admin/teams" : "/manager", label: "Team", icon: BarChart3, show: isMgr },
+    { href: "/req-traction", label: "Req-Traction", icon: Activity, show: isMgr },
     { href: "/hr", label: "Incentives", icon: Gift, show: role === "hr" || role === "admin" },
     { href: "/admin", label: "Admin", icon: Settings2, show: role === "admin" },
     { href: "/security", label: "Security", icon: ShieldCheck, show: true },
