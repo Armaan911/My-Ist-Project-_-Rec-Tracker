@@ -35,7 +35,7 @@ export default async function RewardsPage() {
   const admin = createAdminClient();
   const [{ data: requests }, metrics, { data: allBadges }, { data: myAwards }] = await Promise.all([
     admin.from("reward_requests")
-      .select("id, source, status, candidate_name, requirement_title, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
+      .select("id, source, status, candidate_name, requirement_title, job_title, client_name, vendor_name, rate_closed, other_details, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
       .eq("recruiter_id", user.id).order("created_at", { ascending: false }),
     computeRecruiterMetrics(admin, user.id, today),
     supabase.from("badges").select("*").eq("is_active", true).order("sort_order"),
@@ -85,8 +85,10 @@ export default async function RewardsPage() {
                     return (
                       <tr key={r.id} className="border-t border-line align-top">
                         <td className="py-2 pr-3">
-                          <div className="font-medium">{r.candidate_name ?? r.note ?? "—"}</div>
-                          {r.requirement_title && <div className="text-xs text-muted">{r.requirement_title}</div>}
+                          <div className="font-medium">{r.candidate_name ?? "—"}</div>
+                          {(r.job_title || r.requirement_title) && <div className="text-xs text-muted">{r.job_title ?? r.requirement_title}{r.client_name ? ` · ${r.client_name}` : ""}{r.vendor_name ? ` · vendor: ${r.vendor_name}` : ""}</div>}
+                          {r.rate_closed && <div className="text-xs text-muted">Rate: {r.rate_closed}</div>}
+                          {r.other_details && <div className="text-xs text-muted">{r.other_details}</div>}
                           {r.hr_comment && <div className="mt-0.5 text-xs text-danger-600">“{r.hr_comment}”</div>}
                         </td>
                         <td className="pr-3">

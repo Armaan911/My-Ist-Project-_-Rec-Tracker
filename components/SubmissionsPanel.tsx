@@ -36,6 +36,11 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   const [dupes, setDupes] = useState<DuplicateHit[]>([]);
   const [checking, setChecking] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const qq = q.trim().toLowerCase();
+  const visible = qq
+    ? submissions.filter((s) => (s.candidate_name ?? "").toLowerCase().includes(qq) || (s.requirements?.title ?? "").toLowerCase().includes(qq))
+    : submissions;
 
   async function checkDupes() {
     if (!d.candidate_email.trim() && !d.phone.trim()) { setDupes([]); return; }
@@ -159,14 +164,18 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
 
       {msg && <p className="mt-2 text-sm text-muted">{msg}</p>}
 
-      <div className="mt-5 overflow-x-auto">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-muted">{visible.length} submission{visible.length === 1 ? "" : "s"}</h3>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search candidate or role…" className="h-9 w-60 rounded-lg border border-line bg-surface px-3 text-sm" />
+      </div>
+      <div className="mt-2 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase text-muted">
             <tr><th className="py-2">Candidate</th><th>Requirement</th><th>Submitted</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
-            {submissions.map((s) => <SubRow key={s.id} s={s} statuses={statuses} />)}
-            {submissions.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-sm text-muted">No candidates submitted yet — add your first above.</td></tr>}
+            {visible.map((s) => <SubRow key={s.id} s={s} statuses={statuses} />)}
+            {visible.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-sm text-muted">{submissions.length === 0 ? "No candidates submitted yet — add your first above." : "No submissions match your search."}</td></tr>}
           </tbody>
         </table>
       </div>

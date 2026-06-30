@@ -30,7 +30,7 @@ export default async function AiRewards() {
   const [{ data: mine }, { data: requests }] = await Promise.all([
     admin.from("fetched_profiles").select("id, status, created_at").eq("owner_id", me.id),
     admin.from("reward_requests")
-      .select("id, status, candidate_name, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
+      .select("id, status, candidate_name, job_title, client_name, vendor_name, rate_closed, other_details, amount, currency, hr_comment, note, created_at, hr_decided_at, initiated_at")
       .eq("recruiter_id", me.id).order("created_at", { ascending: false }),
   ]);
 
@@ -96,7 +96,10 @@ export default async function AiRewards() {
                   return (
                     <tr key={r.id} className="border-t border-line align-top">
                       <td className="py-2 pr-3">
-                        <div className="font-medium">{r.candidate_name ?? r.note ?? "—"}</div>
+                        <div className="font-medium">{r.candidate_name ?? "—"}</div>
+                        {r.job_title && <div className="text-xs text-muted">{r.job_title}{r.client_name ? ` · ${r.client_name}` : ""}{r.vendor_name ? ` · vendor: ${r.vendor_name}` : ""}</div>}
+                        {r.rate_closed && <div className="text-xs text-muted">Rate: {r.rate_closed}</div>}
+                        {r.other_details && <div className="text-xs text-muted">{r.other_details}</div>}
                         {r.hr_comment && <div className="mt-0.5 text-xs text-danger-600">“{r.hr_comment}”</div>}
                       </td>
                       <td className="pr-3 text-right font-medium">{money(r.amount, r.currency)}</td>
