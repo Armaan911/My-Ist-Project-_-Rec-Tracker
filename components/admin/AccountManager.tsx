@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Plus, Search, Pencil, KeyRound, Trash2 } from "lucide-react";
-import { createAccount, updateAccount, setUserPassword, sendPasswordReset, deleteAccount } from "@/app/admin/accounts/actions";
+import { Plus, Search, Pencil, KeyRound, Trash2, AtSign } from "lucide-react";
+import { createAccount, updateAccount, setUserPassword, sendPasswordReset, updateUserEmail, deleteAccount } from "@/app/admin/accounts/actions";
 import { Avatar, Badge, Button, Card, Input, Label, Modal, Spinner } from "@/components/ui";
 import { toast } from "@/components/uikit";
 import ImageUpload from "@/components/ImageUpload";
@@ -282,6 +282,20 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // email / login change
+  const [email, setEmail] = useState(person.email);
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function applyEmail() {
+    setEmailMsg(null);
+    const next = email.trim().toLowerCase();
+    if (next === person.email.toLowerCase()) { setEmailMsg({ ok: false, text: "That's already their email." }); return; }
+    setEmailBusy(true);
+    const res = await updateUserEmail({ id: person.id, email: next });
+    setEmailBusy(false);
+    setEmailMsg(res.ok ? { ok: true, text: "Email updated — they now sign in with the new address." } : { ok: false, text: res.error ?? "Failed" });
+  }
+
   async function applyPassword() {
     setPwMsg(null);
     if (newPw.length < 8) { setPwMsg({ ok: false, text: "Use at least 8 characters." }); return; }
@@ -339,6 +353,19 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="h-4 w-4 rounded border-line" />
           Account is active (can sign in)
         </label>
+
+        <div className="rounded-xl border border-line bg-canvas/40 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium"><AtSign size={14} className="text-brand-700" /> Email / login</div>
+          <p className="mt-1 text-xs text-muted">Changing this updates how they sign in. They'll use the new address immediately (no re-confirmation needed).</p>
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <div className="flex-1 min-w-[200px]">
+              <Label>Email address</Label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" />
+            </div>
+            <Button variant="secondary" size="sm" disabled={emailBusy || !email.trim()} onClick={applyEmail}>{emailBusy ? "…" : "Update email"}</Button>
+          </div>
+          {emailMsg && <p className={`mt-2 text-xs font-medium ${emailMsg.ok ? "text-success-600" : "text-danger-600"}`}>{emailMsg.text}</p>}
+        </div>
 
         <div className="rounded-xl border border-line bg-canvas/40 p-3">
           <div className="flex items-center gap-2 text-sm font-medium"><KeyRound size={14} className="text-brand-700" /> Reset password</div>

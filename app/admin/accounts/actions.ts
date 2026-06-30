@@ -115,6 +115,28 @@ export async function deleteAccount(input: { id: string }) {
   return { ok: true, soft: false as const };
 }
 
+// Admin changes a user's email/login. Updates the auth user (so they sign in with the new
+// address) and the profile row. Email stays confirmed so they can log in immediately.
+export async function updateUserEmail(input: { id: string; email: string }) {
+  const me = await getProfile();
+  if (me?.role !== "admin") return { ok: false, error: "Not authorized" };
+  const email = (input.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Enter a valid email address." };
+  const admin = createAdminClient();
+
+  const { data: clash } = await admin.from("profiles").select("id").ilike("email", email).neq("id", input.id).maybeSingle();
+  if (clash) return { ok: false, error: "That email is already used by another account." };
+
+  const { error: authErr } = await admin.auth.admin.updateUserById(input.id, { email, email_confirm: true });
+  if (authErr) return { ok: false, error: authErr.message };
+  const { error: pErr } = await admin.from("profiles").update({ email }).eq("id", input.id);
+  if (pErr) return { ok: false, error: pErr.message };
+
+  await logAudit(me.id, "account.email_update", "profiles", input.id, { email });
+  revalidateAccountViews();
+  return { ok: true };
+}
+
 // Admin sets a new password for a user directly (applies immediately).
 // Most reliable path — no email dependency. Admin shares the temp password with the person.
 export async function setUserPassword(input: { id: string; password: string }) {
