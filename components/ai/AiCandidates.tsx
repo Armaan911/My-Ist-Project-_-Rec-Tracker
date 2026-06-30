@@ -120,6 +120,7 @@ function AiRow({ r, onPatch, onDelete }: { r: FP; onPatch: (id: string, p: Parti
     if (!res.ok) toast(res.error ?? "Save failed", "error");
   }
   async function uploadResume(f: File) {
+    if (f.size > 4 * 1024 * 1024) { toast("Resume must be under 4 MB.", "error"); return; }
     setUploading(true);
     try {
       const supabase = createClient();

@@ -92,6 +92,7 @@ function DetailModal({ p, onClose, onPatch }: { p: FP; onClose: () => void; onPa
     else toast("Status updated — AI team notified", "success");
   }
   async function upload(f: File) {
+    if (f.size > 4 * 1024 * 1024) { toast("Resume must be under 4 MB.", "error"); return; }
     setUploading(true);
     try {
       const supabase = createClient();

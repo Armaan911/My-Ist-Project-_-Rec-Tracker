@@ -5,6 +5,7 @@ import { createSubmission, updateSubmissionStatus, deleteSubmission, updateSubmi
 import type { DuplicateHit } from "@/app/submissions/actions";
 import { Button, Card, Input, Label, Avatar } from "@/components/ui";
 import ImageUpload from "@/components/ImageUpload";
+import { createClient } from "@/lib/supabase/client";
 import type { SubmissionStatus } from "@/lib/types";
 import { isValidLinkedInUrl } from "@/lib/validation";
 
@@ -34,6 +35,7 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   const [photo, setPhoto] = useState<string | null>(null);
   const [dupes, setDupes] = useState<DuplicateHit[]>([]);
   const [checking, setChecking] = useState(false);
+  const [resumeBusy, setResumeBusy] = useState(false);
 
   async function checkDupes() {
     if (!d.candidate_email.trim() && !d.phone.trim()) { setDupes([]); return; }
@@ -44,6 +46,21 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   }
   const [msg, setMsg] = useState<string | null>(null);
   const set = (k: keyof typeof emptyDetails, v: string) => setD((p) => ({ ...p, [k]: v }));
+
+  async function uploadResume(f: File) {
+    if (f.size > 4 * 1024 * 1024) { setMsg("Resume must be under 4 MB."); return; }
+    setResumeBusy(true);
+    try {
+      const supabase = createClient();
+      const ext = (f.name.split(".").pop() || "pdf").toLowerCase();
+      const path = `resumes/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      const { error } = await supabase.storage.from("candidates").upload(path, f, { upsert: true });
+      if (error) { setMsg("Resume upload failed: " + error.message); return; }
+      const { data } = supabase.storage.from("candidates").getPublicUrl(path);
+      set("resume_url", data.publicUrl);
+      setMsg("Resume uploaded.");
+    } finally { setResumeBusy(false); }
+  }
 
   // Live LinkedIn URL validation: must be https and on linkedin.com.
   const linkedinInvalid = d.linkedin_url.trim() !== "" && !isValidLinkedInUrl(d.linkedin_url);
@@ -107,7 +124,17 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
             </select>
           </div>
           <div className="md:col-span-2"><Label>Key skills</Label><Input value={d.key_skills} onChange={(e) => set("key_skills", e.target.value)} placeholder="React, Node, AWS…" /></div>
-          <div><Label>Resume URL</Label><Input value={d.resume_url} onChange={(e) => set("resume_url", e.target.value)} /></div>
+          <div className="md:col-span-2">
+            <Label>Resume (optional)</Label>
+            <div className="flex items-center gap-2">
+              <Input value={d.resume_url} onChange={(e) => set("resume_url", e.target.value)} placeholder="paste a URL, or upload →" />
+              <label className="shrink-0 cursor-pointer whitespace-nowrap rounded-lg border border-line px-3 py-2 text-sm hover:bg-canvas">
+                {resumeBusy ? "Uploading…" : "Upload"}
+                <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadResume(f); e.currentTarget.value = ""; }} />
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-muted">Optional · max 4 MB</p>
+          </div>
         </div>
       )}
 
