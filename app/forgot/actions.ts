@@ -1,7 +1,7 @@
 "use server";
-import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { appOrigin } from "@/lib/origin";
 
 // Self-service "forgot password": generate a recovery link via the admin API and email it
 // through the app's own mailer (Microsoft Graph) — the same path the admin reset uses.
@@ -14,9 +14,7 @@ export async function requestPasswordReset(email: string) {
   const admin = createAdminClient();
   const { data: prof } = await admin.from("profiles").select("full_name").ilike("email", e).maybeSingle();
 
-  const host = headers().get("host");
-  const origin = process.env.NEXT_PUBLIC_APP_URL || (host ? `https://${host}` : "");
-  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email: e, options: { redirectTo: `${origin}/reset` } });
+  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email: e, options: { redirectTo: `${appOrigin()}/reset` } });
 
   // Unknown email → generateLink errors. Swallow it so we don't leak which emails exist.
   if (error) return { ok: true };

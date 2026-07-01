@@ -53,19 +53,14 @@ export function formatMoney(amount: number | null | undefined, currency: string 
 // Admins (all) + managers of the division — the people who can confirm a reward.
 async function rewardReviewerIds(divisionId: string | null): Promise<string[]> {
   const admin = createAdminClient();
-  const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin").eq("is_active", true);
-  let managerIds: string[] = [];
-  if (divisionId) {
-    const { data: pd } = await admin.from("profile_divisions").select("profile_id").eq("division_id", divisionId);
-    const ids = ((pd ?? []) as { profile_id: string }[]).map((r) => r.profile_id);
-    if (ids.length) {
-      const { data: mgr } = await admin.from("profiles").select("id").eq("role", "manager").eq("is_active", true).in("id", ids);
-      managerIds = ((mgr ?? []) as { id: string }[]).map((m) => m.id);
-    }
-  } else {
-    const { data: mgr } = await admin.from("profiles").select("id").eq("role", "manager").eq("is_active", true);
-    managerIds = ((mgr ?? []) as { id: string }[]).map((m) => m.id);
-  }
+  // Every active manager reviews (not only the division's) so newly-created managers are
+  // always in the loop. divisionId kept for API compatibility.
+  void divisionId;
+  const [{ data: admins }, { data: mgr }] = await Promise.all([
+    admin.from("profiles").select("id").eq("role", "admin").eq("is_active", true),
+    admin.from("profiles").select("id").eq("role", "manager").eq("is_active", true),
+  ]);
+  const managerIds = ((mgr ?? []) as { id: string }[]).map((m) => m.id);
   return Array.from(new Set([...((admins ?? []) as { id: string }[]).map((a) => a.id), ...managerIds]));
 }
 

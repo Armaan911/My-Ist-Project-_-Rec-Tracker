@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { appOrigin } from "@/lib/origin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
@@ -178,9 +178,7 @@ export async function sendPasswordReset(input: { id: string }) {
   const { data: meProf } = await admin.from("profiles").select("email").eq("id", me.id).maybeSingle();
   const fromEmail = (meProf as { email?: string } | null)?.email || undefined;
 
-  const host = headers().get("host");
-  const origin = process.env.NEXT_PUBLIC_APP_URL || (host ? `https://${host}` : "");
-  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo: `${origin}/reset` } });
+  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo: `${appOrigin()}/reset` } });
   if (error) return { ok: false, error: error.message };
   const link = (gen as any)?.properties?.action_link as string | undefined;
   if (!link) return { ok: false, error: "Could not generate the reset link." };

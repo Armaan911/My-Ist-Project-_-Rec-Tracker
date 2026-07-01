@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Camera, Trash2, KeyRound, Loader2, Moon, Sun } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { setMyAvatar } from "@/app/account/actions";
+import { setMyAvatar, sendMyPasswordReset } from "@/app/account/actions";
+import { toast } from "@/components/uikit";
 import { Avatar } from "@/components/ui";
 
 // Top-bar profile picture + menu — available to every signed-in user, on every dashboard.
@@ -31,6 +31,13 @@ export default function NavUserMenu({ userId, name, initialUrl }: { userId: stri
   }, [open]);
 
   async function save(next: string | null) { setUrl(next); await setMyAvatar(next); }
+
+  async function resetPassword() {
+    setOpen(false);
+    toast("Sending reset link…");
+    const res = await sendMyPasswordReset();
+    toast(res.ok ? "Password reset link sent to your email." : (res.error ?? "Couldn't send the reset email."), res.ok ? "success" : "error");
+  }
 
   async function pick(file: File) {
     if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) return;
@@ -62,9 +69,9 @@ export default function NavUserMenu({ userId, name, initialUrl }: { userId: stri
               <Trash2 size={14} /> Remove picture
             </button>
           )}
-          <Link href="/security" onClick={() => setOpen(false)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-canvas">
+          <button onClick={resetPassword} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-canvas">
             <KeyRound size={14} /> Reset password
-          </Link>
+          </button>
           <button onClick={toggleTheme} className="flex w-full items-center gap-2 border-t border-line px-3 py-2 text-left text-sm text-ink hover:bg-canvas">
             {dark ? <Sun size={14} /> : <Moon size={14} />} {dark ? "Light mode" : "Dark mode"}
           </button>

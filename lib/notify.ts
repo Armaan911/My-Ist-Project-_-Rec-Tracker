@@ -55,22 +55,13 @@ export async function approvalReviewers(divisionId: string | null): Promise<Reci
       .from("profiles").select("id, email, full_name, role")
       .eq("role", "admin").eq("is_active", true);
 
-    let managers: Recipient[] = [];
-    if (divisionId) {
-      const { data: pd } = await admin.from("profile_divisions").select("profile_id").eq("division_id", divisionId);
-      const ids = (pd ?? []).map((r: { profile_id: string }) => r.profile_id);
-      if (ids.length) {
-        const { data: mg } = await admin
-          .from("profiles").select("id, email, full_name, role")
-          .eq("role", "manager").eq("is_active", true).in("id", ids);
-        managers = (mg ?? []) as Recipient[];
-      }
-    } else {
-      const { data: mg } = await admin
-        .from("profiles").select("id, email, full_name, role")
-        .eq("role", "manager").eq("is_active", true);
-      managers = (mg ?? []) as Recipient[];
-    }
+    // Every active manager is an approver (not only the division's), so any newly-created
+    // manager automatically receives all approval requests too. divisionId kept for API compat.
+    void divisionId;
+    const { data: mg } = await admin
+      .from("profiles").select("id, email, full_name, role")
+      .eq("role", "manager").eq("is_active", true);
+    const managers = (mg ?? []) as Recipient[];
 
     const all = [...((admins ?? []) as Recipient[]), ...managers];
     const seen = new Set<string>();
