@@ -40,21 +40,25 @@ export async function generateTeamSummary(force = false) {
     }
     return { n: r.full_name, s, c, t: r.monthly_submission_target ?? null };
   });
-  // Only send active recruiters (capped) + an inactive count — keeps the prompt small.
+  // Send active recruiters (capped), PLUS the names of those with a target but zero activity this
+  // week (so the model can actually name who's "at risk"), plus a tail count. Keeps the prompt small.
   const active = per.filter((r) => r.s || r.c).sort((a, b) => (b.c - a.c) || (b.s - a.s)).slice(0, 15);
+  const no_activity_this_week = per.filter((r) => (r.t ?? 0) > 0 && !r.s && !r.c).map((r) => r.n).slice(0, 8);
   const metrics = {
     week: `${weekStart}..${today}`, open_reqs: openReqs ?? 0,
     team_subs: per.reduce((n, r) => n + r.s, 0), team_closures: per.reduce((n, r) => n + r.c, 0),
-    active, inactive: per.length - active.length, alerts: (alerts ?? []).map((a) => a.title),
+    active, no_activity_this_week, inactive_total: per.length - active.length, alerts: (alerts ?? []).map((a) => a.title),
   };
 
-  const prompt = `Recruitment ops assistant. Using ONLY this JSON (keys: n=name, s=submissions, c=closures, t=target), write a 3-4 sentence plain-English weekly update for a manager — no bullets, no preamble: overall flow, who's doing well (name them), who's behind/at risk (name them), ONE concrete suggestion. Don't invent numbers.\n${JSON.stringify(metrics)}`;
+  const prompt = `Recruitment ops assistant. Using ONLY this JSON, write a 3-4 sentence plain-English weekly update for a manager — no bullets, no preamble: overall flow, who's doing well (name them), who's behind/at risk (name them, including anyone in no_activity_this_week), ONE concrete suggestion. Keys: n=name, s=submissions THIS WEEK, c=closures THIS WEEK, t=MONTHLY submission target (different horizon — don't compare weekly counts to it directly). Don't invent numbers.\n${JSON.stringify(metrics)}`;
   const text = await geminiGenerate(prompt, 320);
 
   if (!isErrorish(text)) {
     const value = { text, at: new Date().toISOString() };
-    if (cachedRow) await supabase.from("app_settings").update({ value }).eq("key", HL_CACHE);
-    else await supabase.from("app_settings").insert({ key: HL_CACHE, value });
+    const { error: wErr } = cachedRow
+      ? await supabase.from("app_settings").update({ value }).eq("key", HL_CACHE)
+      : await supabase.from("app_settings").insert({ key: HL_CACHE, value });
+    if (wErr) console.error("[team_highlight cache write]", wErr.message);
     return { ok: true, text };
   }
   // On failure (e.g. all keys exhausted), fall back to the last good cached summary.

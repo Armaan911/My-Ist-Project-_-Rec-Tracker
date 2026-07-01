@@ -33,7 +33,13 @@ async function callGemini(prompt: string, key: string, maxOutputTokens: number):
     const data = await res.json().catch(() => null as any);
     if (!res.ok) {
       const reason = data?.error?.message || `HTTP ${res.status}`;
-      const retryable = res.status === 429 || res.status >= 500 || /quota|rate|exhaust|overload|unavailable/i.test(reason);
+      // A per-key problem (quota, rate limit, 5xx, or an invalid/expired/unauthorized key) should
+      // fail over to the next key. Only a genuine prompt-level 400 (malformed request) is per-request.
+      const authIssue = /api[_ ]?key|permission|unauthor|invalid|expired|not valid|forbidden/i.test(reason);
+      const retryable =
+        res.status === 429 || res.status >= 500 || res.status === 401 || res.status === 403 ||
+        (res.status === 400 && authIssue) ||
+        /quota|rate|exhaust|overload|unavailable/i.test(reason);
       return { ok: false, reason: `(${res.status}) ${reason}`, retryable };
     }
     const cand = data?.candidates?.[0];
