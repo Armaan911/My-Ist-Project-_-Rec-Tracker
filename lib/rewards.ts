@@ -239,14 +239,15 @@ export async function sendManagerApprovalRequest(rewardId: string, opts: {
       const rawToken = crypto.randomBytes(24).toString("hex");
       await admin.from("reward_approval_tokens").insert({ reward_id: rewardId, approver_id: rv.id, token_hash: sha256(rawToken), expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() });
       if (!rv.email) continue;
-      const approve = `${base}/rewards/approve/${rawToken}?d=approve`;
-      const reject = `${base}/rewards/approve/${rawToken}?d=reject`;
+      // Single "Review & decide" link → a confirmation page with Approve/Reject buttons that POST.
+      // (The decision is NOT baked into a GET URL, so an email link-scanner can't auto-action it.)
+      const review = `${base}/rewards/approve/${rawToken}`;
       const subject = `Incentive approval requested — ${opts.recruiterName}`;
       const html =
         `<p><b>${opts.recruiterName}</b> has requested an incentive and needs your approval.</p>` +
         `<ul>${opts.candidate ? `<li>Candidate: <b>${opts.candidate}</b></li>` : ""}${opts.reason ? `<li>Details: ${opts.reason}</li>` : ""}</ul>` +
-        `<p>${emailButton(approve, "#16a34a", "✓ Approve")}${emailButton(reject, "#dc2626", "✕ Reject")}</p>` +
-        `<p style="color:#888;font-size:12px">No login needed — this link is unique to you. On approval it goes to HR for the payout decision.</p>`;
+        `<p>${emailButton(review, "#068AD3", "Review &amp; decide")}</p>` +
+        `<p style="color:#888;font-size:12px">No login needed — this link is unique to you. You'll confirm Approve or Reject on the page. On approval it goes to HR for the payout decision.</p>`;
       // Sent FROM the requesting recruiter's mailbox (falls back to the default if unsendable).
       await sendEmail(rv.email, subject, html, { from: opts.recruiterEmail, replyTo: opts.recruiterEmail });
     }

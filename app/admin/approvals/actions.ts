@@ -56,29 +56,34 @@ export async function approveChange(id: string) {
     return { ok: false as const, error: msg };
   };
 
-  if (cr.entity_type === "daily_activity") {
-    const { error } = await admin.from("daily_activity").update({
-      resumes_sourced: p.resumes_sourced, applicants_parsed: p.applicants_parsed, notes: p.notes,
-    }).eq("id", cr.entity_id);
-    if (error) return revert(error.message);
-  } else if (cr.entity_type === "daily_activity_item") {
-    // Per-requirement past-day edit: apply, then keep the day locked so further edits re-queue.
-    const res = await saveDailyItems(admin, cr.recruiter_id, p.date!, (p.items ?? []) as never[]);
-    if (!res.ok) return revert(res.error ?? "Couldn't apply the change.");
-    await admin.from("daily_activity_values").update({ is_locked: true }).eq("recruiter_id", cr.recruiter_id).eq("activity_date", p.date!);
-    await evaluateAndAward(cr.recruiter_id);
-  } else if (cr.entity_type === "submission") {
-    const patch: Record<string, unknown> = {};
-    if (p.candidate_name !== undefined) patch.candidate_name = p.candidate_name;
-    if (p.current_status_id !== undefined) patch.current_status_id = p.current_status_id;
-    if (Object.keys(patch).length) {
-      const { error } = await admin.from("submissions").update(patch).eq("id", cr.entity_id);
+  // Apply the payload; any returned error OR thrown exception reverts the claim to pending.
+  try {
+    if (cr.entity_type === "daily_activity") {
+      const { error } = await admin.from("daily_activity").update({
+        resumes_sourced: p.resumes_sourced, applicants_parsed: p.applicants_parsed, notes: p.notes,
+      }).eq("id", cr.entity_id);
       if (error) return revert(error.message);
+    } else if (cr.entity_type === "daily_activity_item") {
+      // Per-requirement past-day edit: apply, then keep the day locked so further edits re-queue.
+      const res = await saveDailyItems(admin, cr.recruiter_id, p.date!, (p.items ?? []) as never[]);
+      if (!res.ok) return revert(res.error ?? "Couldn't apply the change.");
+      const { error: lockErr } = await admin.from("daily_activity_values").update({ is_locked: true }).eq("recruiter_id", cr.recruiter_id).eq("activity_date", p.date!);
+      if (lockErr) console.error("[approveChange] re-lock day failed:", lockErr.message);
+      await evaluateAndAward(cr.recruiter_id);
+    } else if (cr.entity_type === "submission") {
+      const patch: Record<string, unknown> = {};
+      if (p.candidate_name !== undefined) patch.candidate_name = p.candidate_name;
+      if (p.current_status_id !== undefined) patch.current_status_id = p.current_status_id;
+      if (Object.keys(patch).length) {
+        const { error } = await admin.from("submissions").update(patch).eq("id", cr.entity_id);
+        if (error) return revert(error.message);
+      }
     }
+    await logAudit(me.id, "change_request.approve", cr.entity_type, cr.entity_id, p);
+    await notifyApprovalDecision({ recruiterId: cr.recruiter_id, approved: true, what: whatLabel(cr.entity_type), forDate: dateOf(p) });
+  } catch (e: any) {
+    return revert(e?.message ?? "Couldn't apply the change.");
   }
-
-  await logAudit(me.id, "change_request.approve", cr.entity_type, cr.entity_id, p);
-  await notifyApprovalDecision({ recruiterId: cr.recruiter_id, approved: true, what: whatLabel(cr.entity_type), forDate: dateOf(p) });
   revalidatePath("/admin/approvals");
   revalidatePath("/manager/approvals");
   return { ok: true };
