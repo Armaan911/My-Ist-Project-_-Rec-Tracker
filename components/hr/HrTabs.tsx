@@ -15,17 +15,17 @@ const tabs: [string, string, any][] = [
 export default function HrTabs() {
   const path = usePathname();
   return (
-    <div className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
+    <nav className="space-y-1">
       {tabs.map(([href, label, Icon]) => {
         const active = href === "/hr" ? path === "/hr" : path.startsWith(href);
         return (
           <Link key={href} href={href}
-            className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${active ? "border-brand-600 font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-            <Icon size={15} /> {label}
-            {href === "/hr" && <PendingApprovalsBadge endpoint="/api/rewards/hr-pending-count" />}
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${active ? "bg-brand-50 font-medium text-brand-700" : "text-muted hover:bg-canvas hover:text-ink"}`}>
+            <Icon size={16} /> <span>{label}</span>
+            {href === "/hr" && <PendingApprovalsBadge className="ml-auto" endpoint="/api/rewards/hr-pending-count" />}
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }

@@ -11,16 +11,16 @@ const TABS: [string, string, any][] = [
 export default function AiTabs() {
   const path = usePathname();
   return (
-    <div className="mb-6 flex gap-1 border-b border-line">
+    <nav className="space-y-1">
       {TABS.map(([href, label, Icon]) => {
         const active = href === "/ai" ? path === "/ai" : path.startsWith(href);
         return (
           <Link key={href} href={href}
-            className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors ${active ? "border-brand-600 font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-            <Icon size={15} /> {label}
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${active ? "bg-brand-50 font-medium text-brand-700" : "text-muted hover:bg-canvas hover:text-ink"}`}>
+            <Icon size={16} /> <span>{label}</span>
           </Link>
         );
       })}
-    </div>
+    </nav>
   );
 }

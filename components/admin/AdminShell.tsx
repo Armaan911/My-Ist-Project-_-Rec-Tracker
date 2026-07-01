@@ -13,8 +13,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   if (isTeams) {
     return (
       <main className="mx-auto max-w-[1600px] px-3 sm:px-5 lg:px-7 py-8">
-        <ManagerTabs basePath="/admin/teams" />
-        {children}
+        <div className="grid gap-8 md:grid-cols-[220px_1fr]">
+          <aside className="md:sticky md:top-20 md:self-start">
+            <div className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-muted">Team</div>
+            <ManagerTabs basePath="/admin/teams" />
+          </aside>
+          <section className="min-w-0">{children}</section>
+        </div>
       </main>
     );
   }
