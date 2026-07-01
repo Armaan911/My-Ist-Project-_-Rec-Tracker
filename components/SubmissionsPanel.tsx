@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createSubmission, updateSubmissionStatus, deleteSubmission, updateSubmissionName, findDuplicateSubmissions } from "@/app/submissions/actions";
+import { createSubmission, updateSubmissionStatus, deleteSubmission, updateSubmissionName, updateSubmissionDate, findDuplicateSubmissions } from "@/app/submissions/actions";
 import type { DuplicateHit } from "@/app/submissions/actions";
 import { Button, Card, Input, Label, Avatar } from "@/components/ui";
 import ImageUpload from "@/components/ImageUpload";
@@ -12,7 +12,7 @@ import { isValidLinkedInUrl } from "@/lib/validation";
 type Req = { id: string; title: string };
 type Sub = {
   id: string; candidate_name: string; current_status_id: string; submitted_date: string;
-  requirements?: { title: string } | null;
+  requirements?: { title: string } | null; linkedin_url?: string | null;
   current_company?: string | null; current_title?: string | null; total_experience?: number | null;
   current_location?: string | null; resume_url?: string | null; candidate_photo_url?: string | null;
 };
@@ -171,11 +171,11 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
       <div className="mt-2 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase text-muted">
-            <tr><th className="py-2">Candidate</th><th>Requirement</th><th>Submitted</th><th>Status</th><th></th></tr>
+            <tr><th className="py-2">Candidate</th><th>LinkedIn</th><th>Requirement</th><th>Submitted</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {visible.map((s) => <SubRow key={s.id} s={s} statuses={statuses} />)}
-            {visible.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-sm text-muted">{submissions.length === 0 ? "No candidates submitted yet — add your first above." : "No submissions match your search."}</td></tr>}
+            {visible.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-sm text-muted">{submissions.length === 0 ? "No candidates submitted yet — add your first above." : "No submissions match your search."}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -186,6 +186,7 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
 function SubRow({ s, statuses }: { s: Sub; statuses: SubmissionStatus[] }) {
   const cur = statuses.find((st) => st.id === s.current_status_id);
   const [name, setName] = useState(s.candidate_name);
+  const [date, setDate] = useState(s.submitted_date?.slice(0, 10) ?? "");
   const [removed, setRemoved] = useState(false);
   if (removed) return null;
 
@@ -193,6 +194,7 @@ function SubRow({ s, statuses }: { s: Sub; statuses: SubmissionStatus[] }) {
     .filter(Boolean).join(" · ");
 
   async function saveName() { if (name !== s.candidate_name) await updateSubmissionName(s.id, name); }
+  async function saveDate(iso: string) { if (!iso) return; setDate(iso); await updateSubmissionDate(s.id, iso); }
   async function move(newStatus: string) { await updateSubmissionStatus(s.id, newStatus); }
   async function remove() {
     if (!confirm(`Delete submission for ${s.candidate_name}?`)) return;
@@ -216,8 +218,9 @@ function SubRow({ s, statuses }: { s: Sub; statuses: SubmissionStatus[] }) {
           </div>
         </div>
       </td>
+      <td>{s.linkedin_url ? <a href={s.linkedin_url} target="_blank" rel="noreferrer" className="text-brand-700 underline">link</a> : "—"}</td>
       <td>{s.requirements?.title ?? "—"}</td>
-      <td>{s.submitted_date}</td>
+      <td><input type="date" value={date} onChange={(e) => saveDate(e.target.value)} className="rounded border border-line bg-surface px-1.5 py-0.5 text-xs" /></td>
       <td>
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 shrink-0 rounded-full ${cur?.counts_as_closure ? "bg-success-600" : cur?.is_rejection ? "bg-danger-600" : "bg-brand-600"}`} />

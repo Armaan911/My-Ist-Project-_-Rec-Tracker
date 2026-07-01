@@ -79,7 +79,7 @@ export default async function Dashboard() {
     await Promise.all([
       supabase.from("submission_statuses").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("submissions")
-        .select("id, candidate_name, current_status_id, submitted_date, current_company, current_title, total_experience, current_location, resume_url, candidate_photo_url, requirements(title)")
+        .select("id, candidate_name, linkedin_url, current_status_id, submitted_date, current_company, current_title, total_experience, current_location, resume_url, candidate_photo_url, requirements(title)")
         .eq("recruiter_id", user.id).order("submitted_date", { ascending: false }).limit(50),
       supabase.from("v_recruiter_closures").select("closures_all_time, closures_this_month").eq("recruiter_id", user.id).maybeSingle(),
       supabase.from("medal_tiers").select("name, min_closures, color, rank"),

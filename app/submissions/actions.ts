@@ -138,6 +138,18 @@ export async function updateSubmissionName(id: string, candidate_name: string) {
   return { ok: true };
 }
 
+// Edit the submitted (past) date of a submission.
+export async function updateSubmissionDate(id: string, submitted_date: string) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(submitted_date)) return { ok: false, error: "Invalid date" };
+  const { error } = await supabase.from("submissions").update({ submitted_date }).eq("id", id); // RLS: own only
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type DuplicateHit = {

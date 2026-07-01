@@ -1,21 +1,22 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { requestPasswordReset } from "@/app/forgot/actions";
 import { Button, Card, Input, Label } from "@/components/ui";
 
 export default function ForgotPage() {
-  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   async function submit() {
     setErr(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset`,
-    });
-    if (error) setErr(error.message); else setSent(true);
+    if (!email.trim()) { setErr("Enter your email."); return; }
+    setBusy(true);
+    const res = await requestPasswordReset(email);
+    setBusy(false);
+    if (!res.ok) setErr(res.error ?? "Something went wrong."); else setSent(true);
   }
 
   return (
@@ -29,7 +30,7 @@ export default function ForgotPage() {
             <p className="mb-4 text-sm text-slate-500">We'll email you a link to set a new password.</p>
             <Label>Email</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Button className="mt-4 w-full" onClick={submit}>Send reset link</Button>
+            <Button className="mt-4 w-full" disabled={busy} onClick={submit}>{busy ? "Sending…" : "Send reset link"}</Button>
             {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
           </>
         )}

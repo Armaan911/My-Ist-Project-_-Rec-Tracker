@@ -178,7 +178,7 @@ export async function sendPasswordReset(input: { id: string }) {
   const link = (gen as any)?.properties?.action_link as string | undefined;
   if (!link) return { ok: false, error: "Could not generate the reset link." };
 
-  await sendEmail(
+  const sent = await sendEmail(
     email,
     "Reset your Podium password",
     `<p>Hi ${name},</p>
@@ -188,6 +188,7 @@ export async function sendPasswordReset(input: { id: string }) {
      <p style="font-size:12px;color:#666">If you didn't expect this, you can safely ignore this email.</p>`,
   );
 
-  await logAudit(me.id, "account.password_reset_sent", "profiles", input.id, { email });
+  await logAudit(me.id, "account.password_reset_sent", "profiles", input.id, { email, sent });
+  if (!sent) return { ok: false, error: "The reset link couldn't be emailed — email transport (Microsoft Graph / Resend) isn't working." };
   return { ok: true };
 }
