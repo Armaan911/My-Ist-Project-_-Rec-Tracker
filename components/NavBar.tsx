@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X, Activity, BookOpen } from "lucide-react";
+import { LayoutGrid, BarChart3, Settings2, ShieldCheck, LogOut, Gift, Bot, BadgeCheck, Menu, X, Activity } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import NavUserMenu from "@/components/NavUserMenu";
 import AnimatedLogo from "@/components/AnimatedLogo";
@@ -32,7 +32,6 @@ export default function NavBar({ name, role, userId, avatarUrl, isCoordinator }:
     { href: "/req-traction", label: "Req-Traction", icon: Activity, show: isMgr },
     { href: "/hr", label: "Incentives", icon: Gift, show: role === "hr" || role === "admin" },
     { href: "/admin", label: "Admin", icon: Settings2, show: role === "admin" },
-    { href: "/reference", label: "Reference", icon: BookOpen, show: true },
     { href: "/security", label: "Security", icon: ShieldCheck, show: true },
   ].filter((l) => l.show);
 
