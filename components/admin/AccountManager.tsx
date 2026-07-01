@@ -266,6 +266,7 @@ function CreateModal({ open, onClose, divisions }: { open: boolean; onClose: () 
 }
 
 function EditModal({ person, onClose, divisions }: { person: Profile; onClose: () => void; divisions: Division[] }) {
+  const [fullName, setFullName] = useState(person.full_name);
   const [role, setRole] = useState(person.role);
   const [divIds, setDivIds] = useState<string[]>(person.division_ids ?? (person.division_id ? [person.division_id] : []));
   const [target, setTarget] = useState(person.monthly_submission_target?.toString() ?? "");
@@ -314,9 +315,10 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
 
   async function save() {
     setErr(null);
+    if (!fullName.trim()) return setErr("Name can't be empty.");
     if (needsDivision && divIds.length === 0) return setErr("Recruiters and managers need at least one division.");
     setSaving(true);
-    const res = await updateAccount({ id: person.id, role: role as any, division_ids: needsDivision ? divIds : [], monthly_submission_target: target ? Number(target) : null, is_active: active, avatar_url: avatar, is_coordinator: role === "recruiter" ? coordinator : false, can_import_submissions: role === "recruiter" ? importSubs : false });
+    const res = await updateAccount({ id: person.id, full_name: fullName, role: role as any, division_ids: needsDivision ? divIds : [], monthly_submission_target: target ? Number(target) : null, is_active: active, avatar_url: avatar, is_coordinator: role === "recruiter" ? coordinator : false, can_import_submissions: role === "recruiter" ? importSubs : false });
     setSaving(false);
     if (!res.ok) return setErr(res.error!);
     onClose();
@@ -330,6 +332,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
           <Label>Profile photo</Label>
           <ImageUpload bucket="avatars" prefix={person.id} value={avatar} onChange={setAvatar} label="Upload photo" />
         </div>
+        <div><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" /></div>
         <div><Label>Role</Label><RolePicker value={role} onChange={(v) => { setRole(v); if (v === "admin" || v === "hr" || v === "ai_team") setDivIds([]); }} /></div>
         <div>
           <Label>Divisions{needsDivision ? " — pick one or more" : ""}</Label>

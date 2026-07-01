@@ -59,7 +59,7 @@ export async function createAccount(input: {
 
 export async function updateAccount(input: {
   id: string; role: "admin" | "manager" | "recruiter" | "hr" | "ai_team"; division_ids: string[]; monthly_submission_target: number | null; is_active: boolean; avatar_url?: string | null;
-  is_coordinator?: boolean; can_import_submissions?: boolean;
+  is_coordinator?: boolean; can_import_submissions?: boolean; full_name?: string;
 }) {
   const me = await getProfile();
   if (me?.role !== "admin") return { ok: false, error: "Not authorized" };
@@ -74,6 +74,13 @@ export async function updateAccount(input: {
     can_import_submissions: input.role === "recruiter" ? !!input.can_import_submissions : false,
   };
   if (input.avatar_url !== undefined) patch.avatar_url = input.avatar_url;
+  if (input.full_name !== undefined) {
+    const nm = input.full_name.trim();
+    if (!nm) return { ok: false, error: "Name can't be empty." };
+    patch.full_name = nm;
+    // keep the auth user_metadata name in sync
+    await admin.auth.admin.updateUserById(input.id, { user_metadata: { full_name: nm } });
+  }
 
   const { error } = await admin.from("profiles").update(patch).eq("id", input.id);
   if (error) return { ok: false, error: error.message };
