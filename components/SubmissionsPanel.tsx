@@ -56,21 +56,22 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
     setDupes(res.hits);
     setChecking(false);
   }
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const say = (text: string, ok = false) => setMsg({ text, ok });
   const set = (k: keyof typeof emptyDetails, v: string) => setD((p) => ({ ...p, [k]: v }));
 
   async function uploadResume(f: File) {
-    if (f.size > 4 * 1024 * 1024) { setMsg("Resume must be under 4 MB."); return; }
+    if (f.size > 4 * 1024 * 1024) { say("Resume must be under 4 MB."); return; }
     setResumeBusy(true);
     try {
       const supabase = createClient();
       const ext = (f.name.split(".").pop() || "pdf").toLowerCase();
       const path = `resumes/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
       const { error } = await supabase.storage.from("candidates").upload(path, f, { upsert: true });
-      if (error) { setMsg("Resume upload failed: " + error.message); return; }
+      if (error) { say("Resume upload failed: " + error.message); return; }
       const { data } = supabase.storage.from("candidates").getPublicUrl(path);
       set("resume_url", data.publicUrl);
-      setMsg("Resume uploaded.");
+      say("Resume uploaded.", true);
     } finally { setResumeBusy(false); }
   }
 
@@ -79,11 +80,11 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   const canAdd = !!name.trim() && !!reqId && !!statusId && isValidLinkedInUrl(d.linkedin_url);
 
   async function add() {
-    if (!name.trim() || !reqId || !statusId) { setMsg("Fill candidate, requirement, status."); return; }
-    if (!isValidLinkedInUrl(d.linkedin_url)) { setMsg("Enter a valid LinkedIn URL — it must start with https:// and be on linkedin.com."); return; }
+    if (!name.trim() || !reqId || !statusId) { say("Fill candidate, requirement, status."); return; }
+    if (!isValidLinkedInUrl(d.linkedin_url)) { say("Enter a valid LinkedIn URL — it must start with https:// and be on linkedin.com."); return; }
     const res = await createSubmission({ requirement_id: reqId, candidate_name: name, status_id: statusId, submitted_date: date, ...d, candidate_photo_url: photo || undefined });
-    setMsg(res.ok ? "Added." : "Error: " + res.error);
-    if (res.ok) { setName(""); setD({ ...emptyDetails }); setPhoto(null); setDupes([]); setMore(false); }
+    if (res.ok) { say("Added.", true); setName(""); setD({ ...emptyDetails }); setPhoto(null); setDupes([]); setMore(false); }
+    else say(res.error ?? "Couldn't add the submission.");
   }
 
   return (
@@ -169,7 +170,7 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
         </div>
       )}
 
-      {msg && <p className="mt-2 text-sm text-muted">{msg}</p>}
+      {msg && <p className={`mt-2 text-sm font-medium ${msg.ok ? "text-success-600" : "text-danger-600"}`}>{msg.text}</p>}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-muted">{visible.length} submission{visible.length === 1 ? "" : "s"}</h3>

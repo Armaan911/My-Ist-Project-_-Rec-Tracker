@@ -22,6 +22,27 @@ type CandidateFields = {
   candidate_photo_url?: string;
 };
 
+const fmtDMY = (iso: string) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || ""); };
+
+// Is there already a submission for this requirement with the same LinkedIn URL (matching the
+// DB uniqueness constraint)? If so, describe who submitted it and when. Uses the service-role
+// client so it sees other recruiters' submissions too, not just the caller's.
+async function findLinkedInDup(requirementId: string, linkedin: string): Promise<string | null> {
+  const li = (linkedin || "").trim().toLowerCase();
+  if (!li) return null;
+  const admin = createAdminClient();
+  // submissions has two FKs to profiles (recruiter_id + verified_by) — must disambiguate.
+  const { data, error } = await admin.from("submissions")
+    .select("candidate_name, submitted_date, linkedin_url, profiles:profiles!recruiter_id(full_name)")
+    .eq("requirement_id", requirementId).not("linkedin_url", "is", null);
+  if (error) { console.error("[findLinkedInDup]", error.message); return null; }
+  const dup = ((data ?? []) as any[]).find((s) => (s.linkedin_url || "").trim().toLowerCase() === li);
+  if (!dup) return null;
+  const who = dup.profiles?.full_name ?? "another recruiter";
+  const when = dup.submitted_date ? fmtDMY(dup.submitted_date) : "";
+  return `This LinkedIn was already submitted for this requirement by ${who}${when ? ` on ${when}` : ""}${dup.candidate_name ? ` (candidate: ${dup.candidate_name})` : ""}.`;
+}
+
 export async function createSubmission(input: {
   requirement_id: string;
   candidate_name: string;
@@ -35,6 +56,10 @@ export async function createSubmission(input: {
   const { data: profile } = await supabase
     .from("profiles").select("division_id").eq("id", user.id).single();
   if (!profile?.division_id) return { ok: false, error: "No division set" };
+
+  // Block a duplicate LinkedIn for this requirement up front, with who submitted it and when.
+  const dupMsg = await findLinkedInDup(input.requirement_id, input.linkedin_url || "");
+  if (dupMsg) return { ok: false, error: dupMsg };
 
   const exp = input.total_experience ? Number(input.total_experience) : null;
   const { data: sub, error } = await supabase.from("submissions").insert({
@@ -54,14 +79,14 @@ export async function createSubmission(input: {
     source: input.source || null,
     key_skills: input.key_skills || null,
     resume_url: input.resume_url || null,
-    linkedin_url: input.linkedin_url || null,
+    linkedin_url: (input.linkedin_url || "").trim() || null,
     candidate_photo_url: input.candidate_photo_url || null,
     current_status_id: input.status_id,
     submitted_date: input.submitted_date,
   }).select("id").single();
   if (error) {
     if ((error as { code?: string }).code === "23505")
-      return { ok: false, error: "This candidate has already been submitted for this requirement (same LinkedIn URL)." };
+      return { ok: false, error: (await findLinkedInDup(input.requirement_id, input.linkedin_url || "")) ?? "This candidate has already been submitted for this requirement (same LinkedIn URL)." };
     return { ok: false, error: error.message };
   }
 
@@ -172,11 +197,12 @@ export async function findDuplicateSubmissions(email: string, phone: string, lin
   if (e.length < 3 && pDigits.length < 6 && li.length < 5) return { ok: true, hits: [] };
 
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("submissions")
-    .select("candidate_name, candidate_email, phone, linkedin_url, submitted_date, profiles(full_name), requirements(title), submission_statuses(label)")
+    .select("candidate_name, candidate_email, phone, linkedin_url, submitted_date, profiles:profiles!recruiter_id(full_name), requirements(title), submission_statuses(label)")
     .order("submitted_date", { ascending: false })
     .limit(500);
+  if (error) console.error("[findDuplicateSubmissions]", error.message);
 
   const hits: DuplicateHit[] = [];
   for (const s of (data ?? []) as any[]) {
