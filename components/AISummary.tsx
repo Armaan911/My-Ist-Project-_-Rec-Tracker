@@ -1,42 +1,54 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { generateTeamSummary } from "@/app/manager/ai-actions";
 
 const isErrorish = (t: string) => /^AI (error|request failed|summary unavailable)/i.test(t.trim());
 
-// "Today's highlight" banner. Auto-generates the AI team summary and shows it in full —
-// it wraps to as many lines as needed so the whole sentence is always readable (no scrolling).
+// "Today's highlight". Button-triggered ONLY — never calls the AI on page load, so viewing the
+// dashboard never spends tokens. The first click serves a cached summary if one is fresh
+// (<~3h); "Regenerate" forces a new one.
 export default function AISummary() {
   const [text, setText] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  async function load(force = false) {
+  async function gen(force = false) {
     setBusy(true);
-    const res = await generateTeamSummary(force);
-    setText(res?.text ?? null);
-    setBusy(false);
+    try {
+      const res = await generateTeamSummary(force);
+      setText(res?.text ?? "AI summary unavailable — try again.");
+    } catch {
+      setText("AI summary unavailable — try again.");
+    } finally {
+      setBusy(false);
+    }
   }
-  useEffect(() => { load(false); }, []); // cached (regenerates at most ~every 3h)
 
   const ok = !!text && !isErrorish(text);
-  // On error, show the real reason (e.g. "GEMINI_API_KEY is not set", "API key not valid")
-  // so it's actually fixable — this banner is manager/admin-only.
-  const message = busy
-    ? "Generating today’s highlights…"
-    : ok
-    ? text!.replace(/\s+/g, " ").trim()
-    : (text?.replace(/\s+/g, " ").trim() || "Highlights will appear here once AI is available — tap ↻ to retry.");
 
   return (
     <div className="flex items-stretch overflow-hidden rounded-xl border border-brand-100 bg-surface shadow-sm">
       <div className="flex shrink-0 items-center gap-1.5 bg-danger-600 px-3 text-xs font-extrabold uppercase tracking-wider text-white">
         <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> Today’s highlight
       </div>
-      <p className="flex-1 px-4 py-2.5 text-sm font-semibold leading-snug text-ink">{message}</p>
-      <button onClick={() => load(true)} disabled={busy} title="Refresh highlights"
-        className="shrink-0 border-l border-line px-3 text-sm font-medium text-muted hover:text-ink disabled:opacity-50">
-        {busy ? "…" : "↻"}
-      </button>
+      <div className="flex flex-1 flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+        {text === null && !busy ? (
+          <button onClick={() => gen(false)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700">
+            <Sparkles size={15} /> Generate AI summary
+          </button>
+        ) : (
+          <p className={`text-sm font-semibold leading-snug ${ok ? "text-ink" : "text-danger-600"}`}>
+            {busy ? "Generating…" : ok ? text!.replace(/\s+/g, " ").trim() : (text || "Couldn’t generate — try again.")}
+          </p>
+        )}
+        {(text !== null || busy) && (
+          <button onClick={() => gen(true)} disabled={busy} title={ok ? "Regenerate" : "Retry"}
+            className="shrink-0 rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:text-ink disabled:opacity-50">
+            {busy ? "…" : ok ? "Regenerate" : "Retry"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
