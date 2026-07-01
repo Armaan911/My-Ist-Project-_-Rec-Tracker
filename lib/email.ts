@@ -1,5 +1,8 @@
 import { outlookConfigured, sendOutlookMail } from "@/lib/outlook";
 
+// Sender for system notifications like password resets. Overridable via env.
+export const NOREPLY_FROM = process.env.NOREPLY_FROM || "noreply@conglomerateit.com";
+
 // Unified mail sender. Transport priority:
 //   1. Microsoft Graph / Outlook  — when MS_* + OUTLOOK_MAILBOX are set
 //   2. Resend                     — when RESEND_API_KEY is set
