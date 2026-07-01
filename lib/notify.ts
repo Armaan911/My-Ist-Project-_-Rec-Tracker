@@ -1,6 +1,7 @@
 // Server-only module: uses the service-role admin client. Never import into a client component.
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { appOrigin } from "@/lib/origin";
 
 export type NotificationType =
   | "approval_request"
@@ -85,7 +86,7 @@ export async function emailApprovalMagicLink(opts: {
 }): Promise<void> {
   try {
     const admin = createAdminClient();
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const base = appOrigin();
     // Generate a magic-link OTP, then wrap its token_hash in OUR own callback URL.
     // This keeps the whole flow on our domain (no Supabase redirect allow-list needed)
     // and uses the SSR-recommended verifyOtp(token_hash) server flow.

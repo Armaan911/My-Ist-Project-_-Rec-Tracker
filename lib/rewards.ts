@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify, approvalReviewers } from "@/lib/notify";
 import { sendEmail } from "@/lib/email";
+import { appOrigin } from "@/lib/origin";
 
 export const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
@@ -135,7 +136,7 @@ export async function emailHrForReward(rewardId: string, managerId: string): Pro
     }
 
     // Email HR users + the configured HR inbox a link to the dashboard.
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const base = appOrigin();
     const emails = Array.from(new Set([
       ...(hr.map((h) => h.email).filter(Boolean) as string[]),
       ...(hrEmail ? [hrEmail] : []),
@@ -251,7 +252,7 @@ export async function sendManagerApprovalRequest(rewardId: string, opts: {
       metadata: { rewardId },
     });
 
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const base = appOrigin();
     for (const rv of reviewers) {
       const rawToken = crypto.randomBytes(24).toString("hex");
       await admin.from("reward_approval_tokens").insert({ reward_id: rewardId, approver_id: rv.id, token_hash: sha256(rawToken) });

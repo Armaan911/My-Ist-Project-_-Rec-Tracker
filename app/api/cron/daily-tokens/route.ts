@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { outlookConfigured, sendOutlookMail } from "@/lib/outlook";
 import { mintDailyToken } from "@/lib/dailyToken";
+import { appOrigin } from "@/lib/origin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   }
   const admin = createAdminClient();
   const forDate = istDate();
-  const base = process.env.NEXT_PUBLIC_APP_URL;
+  const base = appOrigin();
 
   const { data: recruiters, error } = await admin.from("profiles").select("id, full_name, email").eq("role", "recruiter").eq("is_active", true);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
