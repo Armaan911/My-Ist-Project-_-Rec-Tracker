@@ -21,37 +21,56 @@ export type ReqCardData = {
 };
 
 export default function ReqTraction({ cards }: { cards: ReqCardData[] }) {
+  const [domain, setDomain] = useState("all");
   const [sel, setSel] = useState("all");
-  const shown = sel === "all" ? cards : cards.filter((c) => c.id === sel);
-  const totalSubs = cards.reduce((n, c) => n + c.total, 0);
-  const totalClos = cards.reduce((n, c) => n + c.closures, 0);
-  const avgAge = cards.length ? Math.round(cards.reduce((n, c) => n + c.ageDays, 0) / cards.length) : 0;
+
+  // Domain buckets (US IT / India IT / Internal Hiring). Everything below is scoped to the pick.
+  const domains = Array.from(new Set(cards.map((c) => c.division).filter(Boolean) as string[])).sort();
+  const inDomain = domain === "all" ? cards : cards.filter((c) => c.division === domain);
+  const shown = sel === "all" ? inDomain : inDomain.filter((c) => c.id === sel);
+  const totalSubs = inDomain.reduce((n, c) => n + c.total, 0);
+  const totalClos = inDomain.reduce((n, c) => n + c.closures, 0);
+  const avgAge = inDomain.length ? Math.round(inDomain.reduce((n, c) => n + c.ageDays, 0) / inDomain.length) : 0;
 
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Req-Traction</h1>
-          <p className="text-sm text-muted">Active requirement analytics — pipeline progress, recruiter breakup, closures and aging.</p>
+          <p className="text-sm text-muted">Active requirement analytics by domain — pipeline progress, recruiter breakup, closures and aging.</p>
         </div>
         <div>
           <label className="block text-xs font-medium uppercase tracking-wide text-muted">Job requirement</label>
           <select value={sel} onChange={(e) => setSel(e.target.value)} className="mt-1 h-10 min-w-[260px] rounded-lg border border-line bg-surface px-3 text-sm">
-            <option value="all">All active requirements ({cards.length})</option>
-            {cards.map((c) => <option key={c.id} value={c.id}>{c.title}{c.jobCode ? ` · ${c.jobCode}` : ""}</option>)}
+            <option value="all">All requirements ({inDomain.length})</option>
+            {inDomain.map((c) => <option key={c.id} value={c.id}>{c.title}{c.jobCode ? ` · ${c.jobCode}` : ""}</option>)}
           </select>
         </div>
       </div>
 
+      {/* Domain buckets */}
+      <div className="flex flex-wrap gap-1 overflow-x-auto border-b border-line">
+        {["all", ...domains].map((d) => {
+          const active = domain === d;
+          const count = d === "all" ? cards.length : cards.filter((c) => c.division === d).length;
+          return (
+            <button key={d} onClick={() => { setDomain(d); setSel("all"); }}
+              className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${active ? "border-brand-600 font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+              {d === "all" ? "All domains" : d} <span className="text-xs text-muted">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Active requirements" value={cards.length} />
+        <Stat label="Requirements" value={inDomain.length} />
         <Stat label="Total submissions" value={totalSubs} />
         <Stat label="Total closures" value={totalClos} tone="success" />
         <Stat label="Avg. aging (days)" value={avgAge} />
       </div>
 
       {shown.length === 0
-        ? <Card><p className="py-12 text-center text-sm text-muted">No active requirements yet. Add open requirements to see their traction here.</p></Card>
+        ? <Card><p className="py-12 text-center text-sm text-muted">No active requirements in this domain yet.</p></Card>
         : shown.map((c) => <ReqCard key={c.id} c={c} />)}
     </>
   );
