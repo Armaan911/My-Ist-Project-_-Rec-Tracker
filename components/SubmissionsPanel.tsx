@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createSubmission, updateSubmissionStatus, deleteSubmission, updateSubmissionName, updateSubmissionDate, findDuplicateSubmissions } from "@/app/submissions/actions";
+import { usePaged, Pager } from "@/components/Pager";
 import type { DuplicateHit } from "@/app/submissions/actions";
 import { Button, Card, Input, Label, Avatar } from "@/components/ui";
 import ImageUpload from "@/components/ImageUpload";
@@ -45,6 +46,8 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
     if (qq && !((s.candidate_name ?? "").toLowerCase().includes(qq) || (s.requirements?.title ?? "").toLowerCase().includes(qq))) return false;
     return true;
   });
+  const { page, setPage, pageCount, slice, total, pageSize } = usePaged(visible, 20);
+  useEffect(() => { setPage(1); }, [reqFilter, qq, setPage]);
 
   async function checkDupes() {
     if (!d.candidate_email.trim() && !d.phone.trim()) { setDupes([]); return; }
@@ -184,11 +187,12 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
             <tr><th className="py-2">Candidate</th><th>LinkedIn</th><th>Requirement</th><th>Submitted</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
-            {visible.map((s) => <SubRow key={s.id} s={s} statuses={statuses} />)}
+            {slice.map((s) => <SubRow key={s.id} s={s} statuses={statuses} />)}
             {visible.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-sm text-muted">{submissions.length === 0 ? "No candidates submitted yet — add your first above." : "No submissions match your search."}</td></tr>}
           </tbody>
         </table>
       </div>
+      <Pager page={page} pageCount={pageCount} setPage={setPage} total={total} pageSize={pageSize} />
     </Card>
   );
 }
