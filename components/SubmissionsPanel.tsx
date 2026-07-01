@@ -50,9 +50,9 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   useEffect(() => { setPage(1); }, [reqFilter, qq, setPage]);
 
   async function checkDupes() {
-    if (!d.candidate_email.trim() && !d.phone.trim()) { setDupes([]); return; }
+    if (!d.candidate_email.trim() && !d.phone.trim() && !d.linkedin_url.trim()) { setDupes([]); return; }
     setChecking(true);
-    const res = await findDuplicateSubmissions(d.candidate_email, d.phone);
+    const res = await findDuplicateSubmissions(d.candidate_email, d.phone, d.linkedin_url);
     setDupes(res.hits);
     setChecking(false);
   }
@@ -94,7 +94,7 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
         <div className="col-span-2"><Label>Candidate <span className="text-danger-600">*</span></Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="col-span-2">
           <Label>Candidate LinkedIn <span className="text-danger-600">*</span></Label>
-          <Input value={d.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} placeholder="https://linkedin.com/in/…"
+          <Input value={d.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} onBlur={checkDupes} placeholder="https://linkedin.com/in/…"
             className={linkedinInvalid ? "border-danger-600 focus:border-danger-600" : ""} />
           {linkedinInvalid && <p className="mt-1 text-xs text-danger-600">Must start with https:// and be a linkedin.com URL.</p>}
         </div>

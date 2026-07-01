@@ -179,10 +179,13 @@ export async function sendPasswordReset(input: { id: string }) {
   const { data: meProf } = await admin.from("profiles").select("email").eq("id", me.id).maybeSingle();
   const fromEmail = (meProf as { email?: string } | null)?.email || undefined;
 
-  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo: `${appOrigin()}/reset` } });
+  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
   if (error) return { ok: false, error: error.message };
-  const link = (gen as any)?.properties?.action_link as string | undefined;
-  if (!link) return { ok: false, error: "Could not generate the reset link." };
+  // Wrap the OTP in our own /auth/callback URL (verifyOtp on our domain) — works on any domain
+  // with no Supabase redirect allow-list, and lands on /reset.
+  const hashed = (gen as { properties?: { hashed_token?: string } } | null)?.properties?.hashed_token;
+  if (!hashed) return { ok: false, error: "Could not generate the reset link." };
+  const link = `${appOrigin()}/auth/callback?token_hash=${encodeURIComponent(hashed)}&type=recovery&next=${encodeURIComponent("/reset")}`;
 
   const sent = await sendEmail(
     email,

@@ -154,32 +154,37 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export type DuplicateHit = {
   candidate_name: string; recruiter: string; requirement: string; status: string;
-  submitted_date: string; matchedOn: ("email" | "phone")[];
+  submitted_date: string; matchedOn: ("email" | "phone" | "linkedin")[];
 };
 
-// Org-wide duplicate check: has this candidate (by email or phone) already been submitted —
-// by anyone, on any requirement? Surfaces it before a recruiter re-submits to a client.
-export async function findDuplicateSubmissions(email: string, phone: string): Promise<{ ok: boolean; hits: DuplicateHit[] }> {
+const normLinkedIn = (u: string) => (u || "").trim().toLowerCase().replace(/^https?:\/\/(www\.)?/, "").replace(/\/+$/, "");
+
+// Org-wide duplicate check: has this candidate (by email, phone, or LinkedIn URL) already
+// been submitted — by anyone, on any requirement? Surfaces it before a recruiter re-submits
+// the same candidate (e.g. the same LinkedIn URL) for a different requirement.
+export async function findDuplicateSubmissions(email: string, phone: string, linkedin = ""): Promise<{ ok: boolean; hits: DuplicateHit[] }> {
   const { data: { user } } = await createClient().auth.getUser();
   if (!user) return { ok: false, hits: [] };
 
   const e = (email || "").trim().toLowerCase();
   const pDigits = (phone || "").replace(/\D/g, "");
-  if (e.length < 3 && pDigits.length < 6) return { ok: true, hits: [] };
+  const li = normLinkedIn(linkedin);
+  if (e.length < 3 && pDigits.length < 6 && li.length < 5) return { ok: true, hits: [] };
 
   const admin = createAdminClient();
   const { data } = await admin
     .from("submissions")
-    .select("candidate_name, candidate_email, phone, submitted_date, profiles(full_name), requirements(title), submission_statuses(label)")
+    .select("candidate_name, candidate_email, phone, linkedin_url, submitted_date, profiles(full_name), requirements(title), submission_statuses(label)")
     .order("submitted_date", { ascending: false })
     .limit(500);
 
   const hits: DuplicateHit[] = [];
   for (const s of (data ?? []) as any[]) {
-    const matched: ("email" | "phone")[] = [];
+    const matched: ("email" | "phone" | "linkedin")[] = [];
     if (e.length >= 3 && (s.candidate_email || "").trim().toLowerCase() === e) matched.push("email");
     const sp = (s.phone || "").replace(/\D/g, "");
     if (pDigits.length >= 6 && sp.length >= 6 && sp.slice(-10) === pDigits.slice(-10)) matched.push("phone");
+    if (li.length >= 5 && normLinkedIn(s.linkedin_url) === li) matched.push("linkedin");
     if (matched.length) {
       hits.push({
         candidate_name: s.candidate_name, recruiter: s.profiles?.full_name ?? "—",

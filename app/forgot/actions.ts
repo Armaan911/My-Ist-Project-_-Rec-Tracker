@@ -14,12 +14,15 @@ export async function requestPasswordReset(email: string) {
   const admin = createAdminClient();
   const { data: prof } = await admin.from("profiles").select("full_name").ilike("email", e).maybeSingle();
 
-  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email: e, options: { redirectTo: `${appOrigin()}/reset` } });
+  const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email: e });
 
   // Unknown email → generateLink errors. Swallow it so we don't leak which emails exist.
   if (error) return { ok: true };
-  const link = (gen as { properties?: { action_link?: string } } | null)?.properties?.action_link;
-  if (!link) return { ok: true };
+  // Wrap the OTP in OUR OWN /auth/callback URL (verifyOtp on our domain) so it works on any
+  // domain with no Supabase redirect allow-list, and lands on /reset to set the new password.
+  const hashed = (gen as { properties?: { hashed_token?: string } } | null)?.properties?.hashed_token;
+  if (!hashed) return { ok: true };
+  const link = `${appOrigin()}/auth/callback?token_hash=${encodeURIComponent(hashed)}&type=recovery&next=${encodeURIComponent("/reset")}`;
 
   const name = (prof as { full_name?: string } | null)?.full_name ?? "there";
   const sent = await sendEmail(

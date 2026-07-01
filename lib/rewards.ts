@@ -51,20 +51,6 @@ export function formatMoney(amount: number | null | undefined, currency: string 
   return `${sym}${n}${currency && !sym ? ` ${currency}` : ""}`;
 }
 
-// Admins (all) + managers of the division — the people who can confirm a reward.
-async function rewardReviewerIds(divisionId: string | null): Promise<string[]> {
-  const admin = createAdminClient();
-  // Every active manager reviews (not only the division's) so newly-created managers are
-  // always in the loop. divisionId kept for API compatibility.
-  void divisionId;
-  const [{ data: admins }, { data: mgr }] = await Promise.all([
-    admin.from("profiles").select("id").eq("role", "admin").eq("is_active", true),
-    admin.from("profiles").select("id").eq("role", "manager").eq("is_active", true),
-  ]);
-  const managerIds = ((mgr ?? []) as { id: string }[]).map((m) => m.id);
-  return Array.from(new Set([...((admins ?? []) as { id: string }[]).map((a) => a.id), ...managerIds]));
-}
-
 // Called when a recruiter records a closure. Creates one reward request per closed
 // submission and notifies the division's managers + admins to confirm. Best-effort.
 export async function createRewardOnClosure(submissionId: string, recruiterId: string): Promise<void> {
@@ -85,20 +71,16 @@ export async function createRewardOnClosure(submissionId: string, recruiterId: s
     }).select("id").single();
     if (error || !inserted) { console.log("[rewards] create failed:", error?.message); return; }
 
-    const { data: rec } = await admin.from("profiles").select("full_name").eq("id", recruiterId).maybeSingle();
+    const { data: rec } = await admin.from("profiles").select("full_name, email").eq("id", recruiterId).maybeSingle();
     const recruiterName = (rec as { full_name?: string } | null)?.full_name ?? "A recruiter";
+    const recruiterEmail = (rec as { email?: string | null } | null)?.email ?? null;
 
-    const reviewerIds = await rewardReviewerIds(divisionId);
-    if (reviewerIds.length) {
-      await notify({
-        userIds: reviewerIds,
-        type: "message",
-        title: "Closure to confirm",
-        body: `${recruiterName} recorded a closure for ${candidate}${reqTitle ? ` · ${reqTitle}` : ""}. Confirm it to start the reward.`,
-        link: "/manager/rewards",
-        metadata: { rewardId: inserted.id },
-      });
-    }
+    // Alert reviewers in-app AND email them one-click approve/reject links, so a closure
+    // generates a working email alert (not just an in-app ping).
+    await sendManagerApprovalRequest(inserted.id, {
+      divisionId, recruiterName, recruiterEmail,
+      candidate, reason: reqTitle ? `Closure · ${reqTitle}` : "Closure",
+    });
   } catch (e) {
     console.log("[rewards] createRewardOnClosure failed:", e);
   }
