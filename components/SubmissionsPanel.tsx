@@ -12,6 +12,7 @@ import { isValidLinkedInUrl } from "@/lib/validation";
 type Req = { id: string; title: string };
 type Sub = {
   id: string; candidate_name: string; current_status_id: string; submitted_date: string;
+  requirement_id?: string | null;
   requirements?: { title: string } | null; linkedin_url?: string | null;
   current_company?: string | null; current_title?: string | null; total_experience?: number | null;
   current_location?: string | null; resume_url?: string | null; candidate_photo_url?: string | null;
@@ -37,10 +38,13 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
   const [checking, setChecking] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
   const [q, setQ] = useState("");
+  const [reqFilter, setReqFilter] = useState("all");
   const qq = q.trim().toLowerCase();
-  const visible = qq
-    ? submissions.filter((s) => (s.candidate_name ?? "").toLowerCase().includes(qq) || (s.requirements?.title ?? "").toLowerCase().includes(qq))
-    : submissions;
+  const visible = submissions.filter((s) => {
+    if (reqFilter !== "all" && s.requirement_id !== reqFilter) return false;
+    if (qq && !((s.candidate_name ?? "").toLowerCase().includes(qq) || (s.requirements?.title ?? "").toLowerCase().includes(qq))) return false;
+    return true;
+  });
 
   async function checkDupes() {
     if (!d.candidate_email.trim() && !d.phone.trim()) { setDupes([]); return; }
@@ -166,7 +170,13 @@ export default function SubmissionsPanel({ requirements, statuses, submissions }
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-muted">{visible.length} submission{visible.length === 1 ? "" : "s"}</h3>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search candidate or role…" className="h-9 w-60 rounded-lg border border-line bg-surface px-3 text-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={reqFilter} onChange={(e) => setReqFilter(e.target.value)} className="h-9 rounded-lg border border-line bg-surface px-2 text-sm">
+            <option value="all">All requirements</option>
+            {requirements.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+          </select>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search candidate or role…" className="h-9 w-60 rounded-lg border border-line bg-surface px-3 text-sm" />
+        </div>
       </div>
       <div className="mt-2 overflow-x-auto">
         <table className="w-full text-left text-sm">
