@@ -1,10 +1,16 @@
 import { headers } from "next/headers";
 
-// Public origin for links we put in emails. Prefer the actual request host so a deployed
-// site never emits localhost links even if NEXT_PUBLIC_APP_URL is misconfigured; fall back
-// to NEXT_PUBLIC_APP_URL (e.g. for cron with no request host).
+// The canonical production URL. Reset/verification links must always land here (never a
+// localhost dev link), so it's the last-resort default even when running locally.
+const PROD_URL = "https://cgit-recruiter-performance-tracker.vercel.app";
+
+// Public origin for links we put in emails. Prefer an explicit NEXT_PUBLIC_APP_URL, then the
+// real (non-localhost) request host, and finally the production URL — so a link in an email
+// is never localhost.
 export function appOrigin(): string {
+  const env = (process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/$/, "");
+  if (env && !env.includes("localhost") && !env.includes("127.0.0.1")) return env;
   const host = (headers().get("host") || "").trim();
   if (host && !host.includes("localhost") && !host.startsWith("127.")) return `https://${host}`;
-  return process.env.NEXT_PUBLIC_APP_URL || (host ? `http://${host}` : "");
+  return PROD_URL;
 }
