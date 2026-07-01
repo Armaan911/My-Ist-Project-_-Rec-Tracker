@@ -44,7 +44,9 @@ export async function confirmReward(id: string, opts?: { amount?: number | null;
     patch.amount = amt;
     patch.currency = opts?.currency === "USD" ? "USD" : "INR";
   }
-  await g.admin.from("reward_requests").update(patch).eq("id", id);
+  // Atomic transition: only one confirm wins the race; skip all side effects otherwise.
+  const { data: upd } = await g.admin.from("reward_requests").update(patch).eq("id", id).eq("status", "pending_manager").select("id");
+  if (!upd?.length) return { ok: false, error: "This request has already been processed." };
 
   await emailHrForReward(id, g.me.id);
   const who = `${g.me.full_name ?? "your reviewer"} (${g.me.role === "admin" ? "admin" : "manager"})`;
@@ -61,9 +63,12 @@ export async function confirmReward(id: string, opts?: { amount?: number | null;
 export async function rejectReward(id: string, reason?: string) {
   const rw = await load(id);
   if (!rw) return { ok: false, error: "Not found" };
-  if (rw.status === "initiated") return { ok: false, error: "Already initiated" };
   const g = await gate(rw.division_id); if (!g.ok) return g;
-  await g.admin.from("reward_requests").update({ status: "rejected", manager_id: g.me.id, note: reason ?? null }).eq("id", id);
+  // Only rejectable before HR has decided; atomic so a decided request can't be flipped.
+  const { data: upd } = await g.admin.from("reward_requests")
+    .update({ status: "rejected", manager_id: g.me.id, note: reason ?? null })
+    .eq("id", id).in("status", ["pending_manager", "manager_confirmed"]).select("id");
+  if (!upd?.length) return { ok: false, error: "This request can no longer be rejected (it's already been decided)." };
   await notify({ userIds: [rw.recruiter_id], type: "message", title: "Incentive rejected",
     body: `Your incentive for ${rw.candidate_name ?? "your candidate"} was rejected${reason ? `: ${reason}` : ""}.`, link: "/dashboard" });
   await emailIncentiveOutcome({ recipientIds: [rw.recruiter_id], fromUserId: g.me.id,
@@ -79,8 +84,10 @@ export async function markInitiated(id: string, note?: string) {
   if (!rw) return { ok: false, error: "Not found" };
   if (rw.status !== "hr_approved") return { ok: false, error: "HR hasn't approved this yet." };
   const g = await gate(rw.division_id); if (!g.ok) return g;
-  await g.admin.from("reward_requests")
-    .update({ status: "initiated", initiated_at: new Date().toISOString(), initiated_by: g.me.id, note: note ?? null }).eq("id", id);
+  const { data: upd } = await g.admin.from("reward_requests")
+    .update({ status: "initiated", initiated_at: new Date().toISOString(), initiated_by: g.me.id, note: note ?? null })
+    .eq("id", id).eq("status", "hr_approved").select("id");
+  if (!upd?.length) return { ok: false, error: "This request has already been processed." };
   await notify({ userIds: [rw.recruiter_id], type: "message", title: "Reward initiated 🎉",
     body: `Your reward for ${rw.candidate_name ?? "your candidate"} has been initiated.`, link: "/dashboard" });
   await logAudit(g.me.id, "reward.initiated", "reward_requests", id, null);

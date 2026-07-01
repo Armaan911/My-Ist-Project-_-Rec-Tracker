@@ -36,10 +36,11 @@ export async function approveIncentive(id: string, input: { amount: number; curr
   if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: "Enter a valid amount." };
   if (input.currency !== "INR" && input.currency !== "USD") return { ok: false, error: "Pick a currency." };
 
-  await g.admin.from("reward_requests").update({
+  const { data: upd } = await g.admin.from("reward_requests").update({
     status: "hr_approved", hr_decision: "approved", hr_decided_at: new Date().toISOString(),
     hr_id: g.me.id, amount, currency: input.currency,
-  }).eq("id", id);
+  }).eq("id", id).eq("status", "manager_confirmed").select("id");
+  if (!upd?.length) return { ok: false, error: "This request has already been decided." };
 
   // Email the payroll / account-manager recipient to add it to salary.
   await emailAccountManagerForIncentive(id);
@@ -73,10 +74,11 @@ export async function denyIncentive(id: string, input: { comment: string }) {
   const comment = (input.comment || "").trim();
   if (!comment) return { ok: false, error: "A comment is required when denying." };
 
-  await g.admin.from("reward_requests").update({
+  const { data: upd } = await g.admin.from("reward_requests").update({
     status: "hr_rejected", hr_decision: "rejected", hr_decided_at: new Date().toISOString(),
     hr_id: g.me.id, hr_comment: comment,
-  }).eq("id", id);
+  }).eq("id", id).eq("status", "manager_confirmed").select("id");
+  if (!upd?.length) return { ok: false, error: "This request has already been decided." };
 
   await notify({
     userIds: [rw.recruiter_id, rw.manager_id].filter(Boolean) as string[],
@@ -103,9 +105,10 @@ export async function markPaid(id: string) {
   if (!rw) return { ok: false, error: "Not found" };
   if (rw.status !== "hr_approved") return { ok: false, error: "Only approved incentives can be marked paid." };
 
-  await g.admin.from("reward_requests").update({
+  const { data: upd } = await g.admin.from("reward_requests").update({
     status: "initiated", initiated_at: new Date().toISOString(), initiated_by: g.me.id,
-  }).eq("id", id);
+  }).eq("id", id).eq("status", "hr_approved").select("id");
+  if (!upd?.length) return { ok: false, error: "This request has already been processed." };
 
   await notify({
     userIds: [rw.recruiter_id], type: "message", title: "Incentive paid 🎉",

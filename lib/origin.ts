@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 
 // The canonical production URL. Reset/verification links must always land here (never a
 // localhost dev link), so it's the last-resort default even when running locally.
-const PROD_URL = "https://my-ist-project-rec-tracker.vercel.app";
+const PROD_URL = "https://podium.conglomeratedigital.com";
 
 // Public origin for links we put in emails. Prefer the ACTUAL request host so links are
 // generated dynamically for whichever domain the request came in on (e.g. podium.conglomerate…

@@ -40,7 +40,7 @@ export async function sendManagerMessage(input: { recipient_ids: string[] | "all
   const { data: senderProf } = await admin.from("profiles").select("email").eq("id", me.id).maybeSingle();
   const senderEmail = (senderProf as { email?: string } | null)?.email ?? null;
   const subjectLine = input.subject?.trim() || `Message from ${me.full_name}`;
-  const html = `<p>${escapeHtml(input.body.trim()).replace(/\n/g, "<br/>")}</p><p style="color:#888;font-size:12px">— ${escapeHtml(me.full_name)} via Recruit Tracker</p>`;
+  const html = `<p>${escapeHtml(input.body.trim()).replace(/\n/g, "<br/>")}</p><p style="color:#888;font-size:12px">— ${escapeHtml(me.full_name)} via Podium</p>`;
   await sendEmail(recipients.map((r) => r.email).filter(Boolean), subjectLine, html, { from: senderEmail, replyTo: senderEmail });
 
   await logAudit(me.id, "message.send", "messages", null, { count: rows.length, broadcast: isBroadcast });

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { istDateStr, addDays, monthBounds, asUtc, inRange } from "@/lib/dates";
 import { sendEmail } from "@/lib/email";
+import { notify } from "@/lib/notify";
+import { appOrigin } from "@/lib/origin";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export async function GET(req: Request) {
   const rule = (setting?.value as any) ?? { min_activity_days_per_week: 4, min_submissions_per_week: 5 };
 
   const [{ data: recruiters }, { data: subs }, { data: acts }] = await Promise.all([
-    admin.from("profiles").select("id, full_name, division_id, monthly_submission_target").eq("role", "recruiter").eq("is_active", true),
+    admin.from("profiles").select("id, full_name, email, division_id, monthly_submission_target").eq("role", "recruiter").eq("is_active", true),
     admin.from("submissions").select("recruiter_id, submitted_date"),
     admin.from("daily_activity").select("recruiter_id, activity_date"),
   ]);
@@ -55,6 +57,15 @@ export async function GET(req: Request) {
       if (dupe && dupe.length) continue;
       toInsert.push({ ...c, about_recruiter_id: r.id, division_id: r.division_id });
       created++;
+
+      // Also alert the recruiter themselves (in-app + email). Throttled by the same 7-day
+      // alerts dedupe above, so at most one ping per (recruiter, type) per week — no spam.
+      const selfTitle = c.type === "target_at_risk" ? "You’re at risk of missing your target" : "Heads up — you may be falling behind";
+      await notify({ userIds: [r.id], type: "message", title: selfTitle, body: c.body, link: "/dashboard" });
+      if (r.email) {
+        await sendEmail(r.email, `Podium — ${selfTitle}`,
+          `<p>Hi ${r.full_name?.split(" ")[0] ?? "there"},</p><p>${c.body}</p><p><a href="${appOrigin()}/dashboard">Open your dashboard</a> to log activity and update your pipeline.</p>`);
+      }
     }
   }
 
@@ -64,7 +75,7 @@ export async function GET(req: Request) {
     const emails = (admins ?? []).map((a) => a.email).filter(Boolean);
     if (emails.length) {
       const items = toInsert.map((a) => `<li><b>${a.title}</b><br/>${a.body}</li>`).join("");
-      await sendEmail(emails, `Recruit Tracker: ${toInsert.length} new alert(s)`, `<p>New alerts:</p><ul>${items}</ul>`);
+      await sendEmail(emails, `Podium: ${toInsert.length} new alert(s)`, `<p>New alerts:</p><ul>${items}</ul><p><a href="${appOrigin()}/admin/teams">Open the team dashboard</a></p>`);
     }
   }
   return NextResponse.json({ ok: true, created });

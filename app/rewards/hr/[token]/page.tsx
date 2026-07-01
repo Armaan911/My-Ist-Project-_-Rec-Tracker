@@ -1,66 +1,47 @@
+import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify } from "@/lib/notify";
 import { sha256 } from "@/lib/rewards";
 
 export const dynamic = "force-dynamic";
 
-// HR clicks an Approve/Reject link from the email (no login). Tokenized + idempotent.
-export default async function HrRewardDecisionPage({
-  params, searchParams,
-}: { params: { token: string }; searchParams: { d?: string } }) {
-  const decision = searchParams.d === "reject" ? "reject" : searchParams.d === "approve" ? "approve" : null;
+// Mutation happens ONLY on this POST (human click) — never on GET render — so email scanners
+// can't auto-decide. Transition is atomic and the token is cleared so the link can't be replayed.
+async function submit(formData: FormData) {
+  "use server";
+  const token = String(formData.get("token") || "");
+  const decision = formData.get("decision") === "reject" ? "reject" : "approve";
   const admin = createAdminClient();
+  const { data: rw } = await admin.from("reward_requests")
+    .select("id, status, candidate_name, recruiter_id, manager_id")
+    .eq("hr_token_hash", sha256(token)).maybeSingle();
 
-  const { data: rw } = await admin
-    .from("reward_requests")
-    .select("id, status, candidate_name, requirement_title, recruiter_id, manager_id, hr_decided_at")
-    .eq("hr_token_hash", sha256(params.token))
-    .maybeSingle();
-
-  let heading = "Invalid or expired link";
-  let body = "This reward link isn't valid anymore. It may have already been actioned.";
-  let tone: "ok" | "bad" | "neutral" = "neutral";
-
+  let state = "invalid";
   if (rw) {
-    const r = rw as {
-      id: string; status: string; candidate_name: string | null; requirement_title: string | null;
-      recruiter_id: string; manager_id: string | null; hr_decided_at: string | null;
-    };
-    const cand = r.candidate_name ?? "the candidate";
-
-    if (r.hr_decided_at || r.status === "hr_approved" || r.status === "hr_rejected" || r.status === "initiated") {
-      heading = "Already recorded";
-      body = `This reward for ${cand} is already marked "${r.status.replace(/_/g, " ")}". No further action needed.`;
-      tone = "neutral";
-    } else if (r.status !== "manager_confirmed") {
-      heading = "Not ready";
-      body = `This reward isn't awaiting HR yet (current status: ${r.status.replace(/_/g, " ")}).`;
-    } else if (!decision) {
-      heading = "Choose an action";
-      body = "Use the Approve or Reject link from the email.";
-    } else if (decision === "approve") {
-      await admin.from("reward_requests").update({ status: "hr_approved", hr_decision: "approved", hr_decided_at: new Date().toISOString() }).eq("id", r.id);
+    const r = rw as { id: string; status: string; candidate_name: string | null; recruiter_id: string; manager_id: string | null };
+    const { data: upd } = await admin.from("reward_requests").update({
+      status: decision === "approve" ? "hr_approved" : "hr_rejected",
+      hr_decision: decision === "approve" ? "approved" : "rejected",
+      hr_decided_at: new Date().toISOString(), hr_token_hash: null,
+    }).eq("id", r.id).eq("status", "manager_confirmed").select("id");
+    if (upd?.length) {
+      const cand = r.candidate_name ?? "the candidate";
       await notify({
         userIds: [r.recruiter_id, ...(r.manager_id ? [r.manager_id] : [])],
-        type: "message", title: "HR approved the reward",
-        body: `HR approved the reward for ${cand}. It can now be initiated.`, link: "/manager/rewards",
+        type: "message",
+        title: decision === "approve" ? "HR approved the reward" : "HR rejected the reward",
+        body: decision === "approve" ? `HR approved the reward for ${cand}. It can now be initiated.` : `HR rejected the reward for ${cand}.`,
+        link: "/manager/rewards",
       });
-      heading = "Reward approved ✅";
-      body = `Thanks! The reward for ${cand} is approved. The team will initiate it.`;
-      tone = "ok";
+      state = decision === "approve" ? "approved" : "rejected";
     } else {
-      await admin.from("reward_requests").update({ status: "hr_rejected", hr_decision: "rejected", hr_decided_at: new Date().toISOString() }).eq("id", r.id);
-      await notify({
-        userIds: [r.recruiter_id, ...(r.manager_id ? [r.manager_id] : [])],
-        type: "message", title: "HR rejected the reward",
-        body: `HR rejected the reward for ${cand}.`, link: "/manager/rewards",
-      });
-      heading = "Reward rejected";
-      body = `Recorded — the reward for ${cand} was rejected.`;
-      tone = "bad";
+      state = "already";
     }
   }
+  redirect(`/rewards/hr/${encodeURIComponent(token)}?state=${state}`);
+}
 
+function Shell({ tone, heading, body, children }: { tone: "ok" | "bad" | "neutral"; heading: string; body: string; children?: React.ReactNode }) {
   const color = tone === "ok" ? "#16a34a" : tone === "bad" ? "#dc2626" : "#475569";
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f6f7fb", fontFamily: "system-ui, sans-serif" }}>
@@ -68,7 +49,48 @@ export default async function HrRewardDecisionPage({
         <div style={{ height: 6, width: 48, borderRadius: 999, background: color, marginBottom: 16 }} />
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: "#111827" }}>{heading}</h1>
         <p style={{ marginTop: 10, color: "#4b5563", lineHeight: 1.5 }}>{body}</p>
+        {children}
       </div>
     </main>
+  );
+}
+
+export default async function HrRewardDecisionPage({
+  params, searchParams,
+}: { params: { token: string }; searchParams: { d?: string; state?: string } }) {
+  const token = params.token;
+
+  if (searchParams.state) {
+    const s = searchParams.state;
+    if (s === "approved") return <Shell tone="ok" heading="Reward approved ✅" body="The reward is approved. The team can now initiate it." />;
+    if (s === "rejected") return <Shell tone="bad" heading="Reward rejected" body="Recorded — the reward was rejected." />;
+    if (s === "already") return <Shell tone="neutral" heading="Already recorded" body="This reward has already been decided. No further action is needed." />;
+    return <Shell tone="neutral" heading="Invalid or expired link" body="This reward link isn't valid anymore." />;
+  }
+
+  const admin = createAdminClient();
+  const { data: rw } = await admin.from("reward_requests")
+    .select("status, candidate_name").eq("hr_token_hash", sha256(token)).maybeSingle();
+  if (!rw) return <Shell tone="neutral" heading="Invalid or expired link" body="This reward link isn't valid anymore. It may have already been actioned." />;
+  const r = rw as { status: string; candidate_name: string | null };
+  const cand = r.candidate_name ?? "the candidate";
+  if (r.status !== "manager_confirmed") return <Shell tone="neutral" heading="Already recorded" body={`This reward for ${cand} is already "${r.status.replace(/_/g, " ")}". No further action needed.`} />;
+
+  const btn = (bg: string): React.CSSProperties => ({ flex: 1, padding: "12px 18px", border: 0, borderRadius: 10, color: "#fff", background: bg, fontWeight: 700, fontSize: 15, cursor: "pointer" });
+  return (
+    <Shell tone="neutral" heading="Reward decision" body={`Confirm your decision on the reward for ${cand}. Nothing changes until you click a button below.`}>
+      <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
+        <form action={submit} style={{ flex: 1, display: "flex" }}>
+          <input type="hidden" name="token" value={token} />
+          <input type="hidden" name="decision" value="approve" />
+          <button type="submit" style={btn("#16a34a")}>✓ Approve</button>
+        </form>
+        <form action={submit} style={{ flex: 1, display: "flex" }}>
+          <input type="hidden" name="token" value={token} />
+          <input type="hidden" name="decision" value="reject" />
+          <button type="submit" style={btn("#dc2626")}>✕ Reject</button>
+        </form>
+      </div>
+    </Shell>
   );
 }

@@ -237,7 +237,7 @@ export async function sendManagerApprovalRequest(rewardId: string, opts: {
     const base = appOrigin();
     for (const rv of reviewers) {
       const rawToken = crypto.randomBytes(24).toString("hex");
-      await admin.from("reward_approval_tokens").insert({ reward_id: rewardId, approver_id: rv.id, token_hash: sha256(rawToken) });
+      await admin.from("reward_approval_tokens").insert({ reward_id: rewardId, approver_id: rv.id, token_hash: sha256(rawToken), expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() });
       if (!rv.email) continue;
       const approve = `${base}/rewards/approve/${rawToken}?d=approve`;
       const reject = `${base}/rewards/approve/${rawToken}?d=reject`;
@@ -262,13 +262,30 @@ export type ManagerDecisionResult =
 // A manager/admin clicked their one-click email link. Idempotent + attributes the approver.
 // On approve -> manager_confirmed and forward to HR (emailed FROM the approver). On reject -> rejected.
 // Either way the requesting recruiter is notified.
+// Read-only: describe an incentive-approval token without mutating anything. Used to render the
+// emailed link's confirmation page (so an email link-scanner's GET never actions the request).
+export async function lookupManagerApproval(rawToken: string): Promise<{ status: "valid" | "already" | "invalid"; candidate?: string | null }> {
+  try {
+    const admin = createAdminClient();
+    const { data: tok } = await admin.from("reward_approval_tokens").select("reward_id, expires_at").eq("token_hash", sha256(rawToken)).maybeSingle();
+    if (!tok) return { status: "invalid" };
+    if ((tok as { expires_at?: string }).expires_at && Date.parse((tok as { expires_at: string }).expires_at) < Date.now()) return { status: "invalid" };
+    const { data: rw } = await admin.from("reward_requests").select("status, candidate_name").eq("id", (tok as { reward_id: string }).reward_id).maybeSingle();
+    if (!rw) return { status: "invalid" };
+    const r = rw as { status: string; candidate_name: string | null };
+    if (r.status !== "pending_manager") return { status: "already", candidate: r.candidate_name };
+    return { status: "valid", candidate: r.candidate_name };
+  } catch { return { status: "invalid" }; }
+}
+
 export async function decideManagerApproval(rawToken: string, decision: "approve" | "reject" | null): Promise<ManagerDecisionResult> {
   try {
     const admin = createAdminClient();
     const { data: tok } = await admin.from("reward_approval_tokens")
-      .select("reward_id, approver_id").eq("token_hash", sha256(rawToken)).maybeSingle();
+      .select("reward_id, approver_id, expires_at").eq("token_hash", sha256(rawToken)).maybeSingle();
     if (!tok) return { status: "invalid" };
-    const t = tok as { reward_id: string; approver_id: string | null };
+    const t = tok as { reward_id: string; approver_id: string | null; expires_at?: string };
+    if (t.expires_at && Date.parse(t.expires_at) < Date.now()) return { status: "invalid" };
 
     const { data: rw } = await admin.from("reward_requests")
       .select("id, status, recruiter_id, candidate_name").eq("id", t.reward_id).maybeSingle();
@@ -283,9 +300,12 @@ export async function decideManagerApproval(rawToken: string, decision: "approve
     const cand = r.candidate_name ?? "your incentive";
 
     if (decision === "approve") {
-      await admin.from("reward_requests").update({
+      // Atomic transition — only the first click (human or a scanner-then-human) wins; a
+      // concurrent approve/reject or double-click that loses the race gets "already".
+      const { data: upd } = await admin.from("reward_requests").update({
         status: "manager_confirmed", manager_id: t.approver_id, manager_confirmed_at: new Date().toISOString(),
-      }).eq("id", r.id);
+      }).eq("id", r.id).eq("status", "pending_manager").select("id");
+      if (!upd?.length) return { status: "already", candidate: r.candidate_name };
       await admin.from("reward_approval_tokens").delete().eq("reward_id", r.id); // consume all links for this request
       await notify({
         userIds: [r.recruiter_id], type: "message", title: "Incentive approved — awaiting HR",
@@ -303,9 +323,10 @@ export async function decideManagerApproval(rawToken: string, decision: "approve
       return { status: "approved", candidate: r.candidate_name, approverName, approverRole };
     }
 
-    await admin.from("reward_requests").update({
+    const { data: upd } = await admin.from("reward_requests").update({
       status: "rejected", manager_id: t.approver_id, note: `Rejected by ${approverName}`,
-    }).eq("id", r.id);
+    }).eq("id", r.id).eq("status", "pending_manager").select("id");
+    if (!upd?.length) return { status: "already", candidate: r.candidate_name };
     await admin.from("reward_approval_tokens").delete().eq("reward_id", r.id);
     await notify({
       userIds: [r.recruiter_id], type: "message", title: "Incentive request rejected",
