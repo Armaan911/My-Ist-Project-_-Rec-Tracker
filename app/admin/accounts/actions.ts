@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { sendEmail, NOREPLY_FROM } from "@/lib/email";
+import { sendEmail } from "@/lib/email";
 
 // Sync a profile's division membership in profile_divisions to exactly `divisionIds`.
 async function syncDivisions(admin: ReturnType<typeof createAdminClient>, profileId: string, divisionIds: string[]) {
@@ -172,6 +172,11 @@ export async function sendPasswordReset(input: { id: string }) {
   const name = (prof as any)?.full_name ?? "there";
   if (!email) return { ok: false, error: "No email on file for that account." };
 
+  // Send the reset from the acting admin's own mailbox (falls back to the default mailbox
+  // if that address can't send via Graph).
+  const { data: meProf } = await admin.from("profiles").select("email").eq("id", me.id).maybeSingle();
+  const fromEmail = (meProf as { email?: string } | null)?.email || undefined;
+
   const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/reset`;
   const { data: gen, error } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo } });
   if (error) return { ok: false, error: error.message };
@@ -186,7 +191,7 @@ export async function sendPasswordReset(input: { id: string }) {
      <p style="margin:20px 0"><a href="${link}" style="background:#068AD3;color:#ffffff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Reset my password</a></p>
      <p style="font-size:12px;color:#666">If the button doesn't work, paste this link into your browser:<br>${link}</p>
      <p style="font-size:12px;color:#666">If you didn't expect this, you can safely ignore this email.</p>`,
-    { from: NOREPLY_FROM },
+    { from: fromEmail },
   );
 
   await logAudit(me.id, "account.password_reset_sent", "profiles", input.id, { email, sent });
