@@ -214,7 +214,7 @@ function CreateModal({ open, onClose, divisions }: { open: boolean; onClose: () 
   const [divIds, setDivIds] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const needsDivision = f.role !== "admin" && f.role !== "hr" && f.role !== "ai_team";
+  const needsDivision = f.role !== "admin" && f.role !== "ai_team";
 
   async function submit() {
     setErr(null);
@@ -257,7 +257,7 @@ function CreateModal({ open, onClose, divisions }: { open: boolean; onClose: () 
         </div>
         <div>
           <Label>Role</Label>
-          <RolePicker value={f.role} onChange={(v) => { setF({ ...f, role: v }); if (v === "admin" || v === "hr" || v === "ai_team") setDivIds([]); }} />
+          <RolePicker value={f.role} onChange={(v) => { setF({ ...f, role: v }); if (v === "admin" || v === "ai_team") setDivIds([]); }} />
         </div>
       </div>
       {err && <p className="mt-4 rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">{err}</p>}
@@ -276,7 +276,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
   const [importSubs, setImportSubs] = useState(!!person.can_import_submissions);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const needsDivision = role !== "admin" && role !== "hr" && role !== "ai_team";
+  const needsDivision = role !== "admin" && role !== "ai_team";
 
   // password reset
   const [newPw, setNewPw] = useState("");
@@ -333,7 +333,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
           <ImageUpload bucket="avatars" prefix={person.id} value={avatar} onChange={setAvatar} label="Upload photo" />
         </div>
         <div><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" /></div>
-        <div><Label>Role</Label><RolePicker value={role} onChange={(v) => { setRole(v); if (v === "admin" || v === "hr" || v === "ai_team") setDivIds([]); }} /></div>
+        <div><Label>Role</Label><RolePicker value={role} onChange={(v) => { setRole(v); if (v === "admin" || v === "ai_team") setDivIds([]); }} /></div>
         <div>
           <Label>Divisions{needsDivision ? " — pick one or more" : ""}</Label>
           {needsDivision ? (
@@ -341,7 +341,7 @@ function EditModal({ person, onClose, divisions }: { person: Profile; onClose: (
               <DivisionMultiPicker divisions={divisions} selected={divIds} onChange={setDivIds} />
               {divIds.length > 1 && <p className="mt-1 text-xs text-muted">First pick (<b>{divisions.find((d) => d.id === divIds[0])?.name}</b>) is the home division; the rest grant cross-division access.</p>}
             </>
-          ) : <p className="text-sm text-muted">{role === "hr" ? "HR spans all divisions." : role === "ai_team" ? "The AI team isn't tied to a division." : "Admins span all divisions."}</p>}
+          ) : <p className="text-sm text-muted">{role === "ai_team" ? "The AI team isn't tied to a division." : "Admins span all divisions."}</p>}
         </div>
         <div><Label>Monthly submission target</Label><Input type="number" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="—" /></div>
         {role === "recruiter" && (

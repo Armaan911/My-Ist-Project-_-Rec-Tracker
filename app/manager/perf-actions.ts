@@ -38,10 +38,12 @@ const HAPPY = ["internal_submitted", "client_submitted", "tech_interview", "clos
 export async function recruiterRangeFull(fromDate: string, toDate: string, divisionId?: string | null) {
   const empty: Record<string, any> = {};
   const me = await getProfile();
-  if (me?.role !== "manager" && me?.role !== "admin") return { ok: false as const, error: "Not authorized", data: empty };
+  if (me?.role !== "manager" && me?.role !== "admin" && me?.role !== "hr") return { ok: false as const, error: "Not authorized", data: empty };
   if (!fromDate || !toDate) return { ok: false as const, error: "Pick a from and to date", data: empty };
   const lo = fromDate <= toDate ? fromDate : toDate;
   const hi = fromDate <= toDate ? toDate : fromDate;
+  // HR is scoped to their own domain (division), regardless of what the client passes.
+  const scopeDiv = me.role === "hr" ? ((me as { division_id?: string | null }).division_id ?? null) : (divisionId ?? null);
 
   const admin = createAdminClient();
   const [{ data: statuses }, { data: subs }, { data: history }] = await Promise.all([
@@ -67,7 +69,7 @@ export async function recruiterRangeFull(fromDate: string, toDate: string, divis
 
   const data: Record<string, any> = {};
   for (const s of (subs ?? []) as any[]) {
-    if (divisionId && s.division_id !== divisionId) continue;
+    if (scopeDiv && s.division_id !== scopeDiv) continue;
     const rid = s.recruiter_id; if (!rid) continue;
     const o = data[rid] ?? { subs: 0, closures: 0, total: 0, reachedClient: 0, reachedInterview: 0, reachedClosure: 0, withEmail: 0, statusDist: {} as Record<string, number> };
     if (inRange(s.submitted_date, lo, hi)) {

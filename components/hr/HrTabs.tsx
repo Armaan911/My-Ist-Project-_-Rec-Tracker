@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, History, BarChart3, Wallet } from "lucide-react";
+import { ClipboardList, History, BarChart3, Wallet, LineChart } from "lucide-react";
 import PendingApprovalsBadge from "@/components/PendingApprovalsBadge";
 
 const tabs: [string, string, any][] = [
   ["/hr", "My Plate", ClipboardList],
   ["/hr/history", "History", History],
+  ["/hr/performance", "Performance", LineChart],
   ["/hr/analytics", "Analytics", BarChart3],
   ["/hr/revenue", "Revenue", Wallet],
 ];

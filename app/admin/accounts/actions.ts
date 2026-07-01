@@ -24,8 +24,9 @@ function revalidateAccountViews() {
   }
 }
 
-// Admins, HR and the AI team are org-wide — they aren't tied to a division.
-const spansAllDivisions = (role: string) => role === "admin" || role === "hr" || role === "ai_team";
+// Admins and the AI team are org-wide — they aren't tied to a division. HR is now
+// domain-based (India IT / US IT / Internal Hiring), so it takes a division like recruiters.
+const spansAllDivisions = (role: string) => role === "admin" || role === "ai_team";
 
 export async function createAccount(input: {
   email: string; password: string; full_name: string;

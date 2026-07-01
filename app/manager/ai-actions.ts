@@ -59,7 +59,7 @@ import { monthBounds } from "@/lib/dates";
 // asks Gemini for a short, specific read with one concrete suggestion.
 export async function generateRecruiterInsight(recruiterId: string) {
   const me = await getProfile();
-  if (!me || (me.role !== "admin" && me.role !== "manager")) return { ok: false, text: "Not authorized." };
+  if (!me || (me.role !== "admin" && me.role !== "manager" && me.role !== "hr")) return { ok: false, text: "Not authorized." };
   const supabase = createAdminClient();
   const today = istDateStr();
   const { start: mStart, end: mEnd } = monthBounds(today);
