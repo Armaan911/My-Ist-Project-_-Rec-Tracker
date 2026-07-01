@@ -10,13 +10,13 @@ export default function AISummary() {
   const [text, setText] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
 
-  async function load() {
+  async function load(force = false) {
     setBusy(true);
-    const res = await generateTeamSummary();
+    const res = await generateTeamSummary(force);
     setText(res?.text ?? null);
     setBusy(false);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(false); }, []); // cached (regenerates at most ~every 3h)
 
   const ok = !!text && !isErrorish(text);
   // On error, show the real reason (e.g. "GEMINI_API_KEY is not set", "API key not valid")
@@ -33,7 +33,7 @@ export default function AISummary() {
         <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> Today’s highlight
       </div>
       <p className="flex-1 px-4 py-2.5 text-sm font-semibold leading-snug text-ink">{message}</p>
-      <button onClick={load} disabled={busy} title="Refresh highlights"
+      <button onClick={() => load(true)} disabled={busy} title="Refresh highlights"
         className="shrink-0 border-l border-line px-3 text-sm font-medium text-muted hover:text-ink disabled:opacity-50">
         {busy ? "…" : "↻"}
       </button>

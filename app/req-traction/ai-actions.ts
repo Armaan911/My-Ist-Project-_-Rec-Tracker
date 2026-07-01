@@ -56,15 +56,8 @@ export async function generateReqInsight(requirementId: string) {
     pipeline_by_stage: byStage, by_recruiter: byRec,
   };
 
-  const prompt = `You are a recruitment delivery analyst. Using ONLY the JSON below for ONE job requirement,
-write a concise read for a manager: 3-5 sentences, plain English, no bullet points, no preamble. Cover how the
-requirement is progressing (pipeline depth vs positions and fill rate), whether it is aging without enough
-movement (use age_days and days_since_last_activity), which recruiter is contributing most, and end with ONE
-concrete, actionable recommendation. Do not invent numbers that are not in the data.
+  const prompt = `Recruitment delivery analyst. Using ONLY this JSON for ONE requirement, write a concise manager read: 3-5 sentences, no bullets, no preamble — progress (pipeline vs positions, fill rate), whether it's aging without movement (age_days, days_since_last_activity), top-contributing recruiter, and ONE concrete recommendation. Don't invent numbers.\n${JSON.stringify(data)}`;
 
-DATA:
-${JSON.stringify(data, null, 2)}`;
-
-  const text = await geminiGenerate(prompt);
+  const text = await geminiGenerate(prompt, 320);
   return { ok: true, text };
 }
